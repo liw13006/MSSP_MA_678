@@ -14,3 +14,7 @@ provide more control on the predictors thus results in better interpretation of 
 ```{R Chick Weight}
 ChickData = ChickWeight
 weight = ChickData$weight
+
+hist(weight)
+
+hist(log(weight))

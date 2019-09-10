@@ -1,0 +1,16 @@
+---
+title: "Sep_10_ClassNotes"
+author: "Weiling Li"
+date: "9/10/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+suppressMessages(library("tidyverse"))
+```
+## Centering and scaling predictors  
+provide more control on the predictors thus results in better interpretation of the outcome
+```{R Chick Weight}
+ChickData = ChickWeight
+weight = ChickData$weight

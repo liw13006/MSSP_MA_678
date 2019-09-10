@@ -45,15 +45,15 @@ output: html_notebook
 It is attempting to say that the model indicated that the effect of mon's highschool status has a stable effect across all the mon's IQ. However, this is actually not a result but an assumption when the Binary + Continuous model is applied to the dataset. As a statistian, you need to figure out whether this assumption holds when you are applying the model to the dataset.
 ---
 # 4. Interations
- lm(kid.score ~ 1 + mon.hs + mon.iq + mon.hs*mon.iq), 
- y = beta0 + beta1*Xhs + beta2*Xiq + beta3*Xhs*Xiq /n
+ $lm(kid.score ~ 1 + mon.hs + mon.iq + mon.hs*mon.iq)$,   
+ $y = beta0 + beta1*Xhs + beta2*Xiq + beta3*Xhs*Xiq$  
  
  the results are: y = -11.48 + 0.97*Xiq + 51.27*Xhs - 0.48*Xiq*Xhs
  
-the model comes down to:
+the model comes down to:  
 
-no HS:    y = -11.48 + 0.97Xiq
-with HS:  y = -11.48 + 0.48Xiq
+no HS:    $y = -11.48 + 0.97Xiq$  
+with HS:  $y = -11.48 + 0.48Xiq$  
 
 This model assumes that mother's HS status will affect how the scale of mother's IQ effect on kid's IQ. So before interpret anything from the results, this assumption needs to be examed
 

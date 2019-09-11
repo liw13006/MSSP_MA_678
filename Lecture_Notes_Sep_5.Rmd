@@ -38,9 +38,9 @@ output: html_notebook
  beta0 = 25.73 + 0.56*Xhs + 5.95*Xiq
  In this case, beta0 means the score of kids with 0 mon.iq and no high school education
 
- the resulting model can be written as:
-    mon with no HS: y = 25.73 + 0.56Xiq
-    mon with HS:    y = 31.68 + 0.56Xiq
+ the resulting model can be written as:  
+    mon with no HS: $y = 25.73 + 0.56Xiq$  
+    mon with HS:    $y = 31.68 + 0.56Xiq$  
 
 It is attempting to say that the model indicated that the effect of mon's highschool status has a stable effect across all the mon's IQ. However, this is actually not a result but an assumption when the Binary + Continuous model is applied to the dataset. As a statistian, you need to figure out whether this assumption holds when you are applying the model to the dataset.
 ---

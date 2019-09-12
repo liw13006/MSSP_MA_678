@@ -1,0 +1,22 @@
+---
+title: "Sep_12_2019_ClassNotes"
+author: "Weiling Li"
+date: "9/12/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Interpretation and Transformation 
+
+skewerness is a problem when applying regression models and in generally should be avoided.  
+Transformation's goal is to reduce the skewerness
+
+## Z-score transformation
+
+$Z = \frac{X-\bar{X}}{\sigma_x}$  
+After Z-score transformation, 1 unit of Z is measured as 1 standard deviation away form the point.
+
+

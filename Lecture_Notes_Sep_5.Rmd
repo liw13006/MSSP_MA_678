@@ -2,14 +2,14 @@
 title: "MSSP678"
 output: html_notebook
 ---
-# Interpretation:
-## 1.Binary Predictor
-## 2.Continuous Predictor
-## 3.Binary + Continuous
-## 4.Interaction:
-##      -Binary: Continuous 
-##      -Binary: Binary
-##      -Continuous: Continuous
+# Interpretation:  
+ 1.Binary Predictor  
+ 2.Continuous Predictor  
+ 3.Binary + Continuous  
+ 4.Interaction:  
+      -Binary: Continuous   
+      -Binary: Binary  
+      -Continuous: Continuous  
 
 ---
 # 1.Binary Predictor
@@ -30,23 +30,28 @@ output: html_notebook
 
  when extrapolating outside the data, you generally get a larger error. But in most applications, people avoid doing it because there is simply not enough data to support any potential claims.
 
- in this case, beta1 is the difference for a unit differece in mon's IQ. because the difference of 1 unit difference in IQ is way too miniscule 
+ in this case, beta1 is the difference for a unit differece in mon's IQ. because the difference of 1 unit difference in IQ is way too miniscule
+ 
+ 
 ---
 # 3.Binary + Continuous
 
- lm(kid.score ~ 1+mon.hs + mon.iq), y = beta0 + beta1*Xhs + beta2*Xiq
- beta0 = 25.73 + 0.56*Xhs + 5.95*Xiq
- In this case, beta0 means the score of kids with 0 mon.iq and no high school education
+ $lm(kid.score ~ 1+mon.hs + mon.iq)$, $y = \beta_0 + \beta_1*X_{hs} + \beta_2*X_{iq}$  
+ $\beta_0 = 25.73 + 0.56*X_{hs} + 5.95*X_{iq}$  
+ In this case, beta0 means the score of kids with 0 mon.iq and no high school education  
 
  the resulting model can be written as:  
-    mon with no HS: $y = 25.73 + 0.56Xiq$  
-    mon with HS:    $y = 31.68 + 0.56Xiq$  
+    mon with no HS: $y = 25.73 + 0.56X_{iq}$  
+    mon with HS:    $y = 31.68 + 0.56X_{iq}$   
 
-It is attempting to say that the model indicated that the effect of mon's highschool status has a stable effect across all the mon's IQ. However, this is actually not a result but an assumption when the Binary + Continuous model is applied to the dataset. As a statistian, you need to figure out whether this assumption holds when you are applying the model to the dataset.
+  
+It is attempting to say that the model indicated that the effect of mon's highschool status has a stable effect across all the mon's IQ. However, this is actually not a result but an assumption when the Binary + Continuous model is applied to the dataset. As a statistian, you need to figure out whether this assumption holds when you are applying the model to the dataset.  
+
+
 ---
 # 4. Interations
  $lm(kid.score ~ 1 + mon.hs + mon.iq + mon.hs*mon.iq)$,   
- $y = beta0 + beta1*Xhs + beta2*Xiq + beta3*Xhs*Xiq$  
+ $y = \beta_0 + \beta_1X_{hs} + \beta_2X_{iq} + \beta_3X_{hs}X_{iq}$  
  
  the results are: y = -11.48 + 0.97*Xiq + 51.27*Xhs - 0.48*Xiq*Xhs
  
@@ -59,18 +64,4 @@ This model assumes that mother's HS status will affect how the scale of mother's
 
 
 
-
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
-
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
-
-```{r}
-plot(cars)
-```
-
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
-
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
-
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
 

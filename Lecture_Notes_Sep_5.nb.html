@@ -1701,71 +1701,33 @@ $(document).ready(function () {
 <!-- rnb-text-begin -->
 <div id="interpretation" class="section level1">
 <h1>Interpretation:</h1>
-<div id="binary-predictor" class="section level2">
-<h2>1.Binary Predictor</h2>
+<p>1.Binary Predictor<br />
+2.Continuous Predictor<br />
+3.Binary + Continuous<br />
+4.Interaction:<br />
+-Binary: Continuous<br />
+-Binary: Binary<br />
+-Continuous: Continuous</p>
 </div>
-<div id="continuous-predictor" class="section level2">
-<h2>2.Continuous Predictor</h2>
-</div>
-<div id="binary-continuous" class="section level2">
-<h2>3.Binary + Continuous</h2>
-</div>
-<div id="interaction" class="section level2">
-<h2>4.Interaction:</h2>
-</div>
-<div id="binary-continuous-1" class="section level2">
-<h2>-Binary: Continuous</h2>
-</div>
-<div id="binary-binary" class="section level2">
-<h2>-Binary: Binary</h2>
-</div>
-<div id="continuous-continuous" class="section level2">
-<h2>-Continuous: Continuous</h2>
-</div>
-</div>
-<div id="continuous-predictor-1" class="section level1">
+<div id="continuous-predictor" class="section level1">
 <h1>2.Continuous Predictor</h1>
 <p>lm(kid.score ~ mon.iq) -&gt; y = beta0 + beta1*Xiq. the fitted model: beta0 = 25ish, beta1 = 0.61 in this case, beta0 is get when Xiq = 0. but that is meaning less in the context of IQ. The intercept in this case is a over extrapolation of the data and the actual number of the intercept lose it’s meaning.</p>
 <p>when extrapolating outside the data, you generally get a larger error. But in most applications, people avoid doing it because there is simply not enough data to support any potential claims.</p>
-<div id="in-this-case-beta1-is-the-difference-for-a-unit-differece-in-mons-iq.-because-the-difference-of-1-unit-difference-in-iq-is-way-too-miniscule" class="section level2">
-<h2>in this case, beta1 is the difference for a unit differece in mon’s IQ. because the difference of 1 unit difference in IQ is way too miniscule</h2>
-</div>
-</div>
-<div id="binary-continuous-2" class="section level1">
-<h1>3.Binary + Continuous</h1>
-<p>lm(kid.score ~ 1+mon.hs + mon.iq), y = beta0 + beta1<em>Xhs + beta2</em>Xiq beta0 = 25.73 + 0.56<em>Xhs + 5.95</em>Xiq In this case, beta0 means the score of kids with 0 mon.iq and no high school education</p>
-<p>the resulting model can be written as:<br />
-mon with no HS: <span class="math inline">\(y = 25.73 + 0.56Xiq\)</span><br />
-mon with HS: <span class="math inline">\(y = 31.68 + 0.56Xiq\)</span></p>
-<div id="it-is-attempting-to-say-that-the-model-indicated-that-the-effect-of-mons-highschool-status-has-a-stable-effect-across-all-the-mons-iq.-however-this-is-actually-not-a-result-but-an-assumption-when-the-binary-continuous-model-is-applied-to-the-dataset.-as-a-statistian-you-need-to-figure-out-whether-this-assumption-holds-when-you-are-applying-the-model-to-the-dataset." class="section level2">
-<h2>It is attempting to say that the model indicated that the effect of mon’s highschool status has a stable effect across all the mon’s IQ. However, this is actually not a result but an assumption when the Binary + Continuous model is applied to the dataset. As a statistian, you need to figure out whether this assumption holds when you are applying the model to the dataset.</h2>
-</div>
+<p>in this case, beta1 is the difference for a unit differece in mon’s IQ. because the difference of 1 unit difference in IQ is way too miniscule</p>
 </div>
 <div id="interations" class="section level1">
 <h1>4. Interations</h1>
 <p><span class="math inline">\(lm(kid.score ~ 1 + mon.hs + mon.iq + mon.hs*mon.iq)\)</span>,<br />
-<span class="math inline">\(y = beta0 + beta1*Xhs + beta2*Xiq + beta3*Xhs*Xiq\)</span></p>
+<span class="math inline">\(y = \beta_0 + \beta_1X_{hs} + \beta_2X_{iq} + \beta_3X_{hs}X_{iq}\)</span></p>
 <p>the results are: y = -11.48 + 0.97<em>Xiq + 51.27</em>Xhs - 0.48<em>Xiq</em>Xhs</p>
 <p>the model comes down to:</p>
 <p>no HS: <span class="math inline">\(y = -11.48 + 0.97Xiq\)</span><br />
 with HS: <span class="math inline">\(y = -11.48 + 0.48Xiq\)</span></p>
 <p>This model assumes that mother’s HS status will affect how the scale of mother’s IQ effect on kid’s IQ. So before interpret anything from the results, this assumption needs to be examed</p>
-<p>This is an <a href="http://rmarkdown.rstudio.com">R Markdown</a> Notebook. When you execute code within the notebook, the results appear beneath the code.</p>
-<p>Try executing this chunk by clicking the <em>Run</em> button within the chunk or by placing your cursor inside it and pressing <em>Cmd+Shift+Enter</em>.</p>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucGxvdChjYXJzKVxuYGBgIn0= -->
-<pre class="r"><code>plot(cars)</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<p>Add a new chunk by clicking the <em>Insert Chunk</em> button on the toolbar or by pressing <em>Cmd+Option+I</em>.</p>
-<p>When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the <em>Preview</em> button or press <em>Cmd+Shift+K</em> to preview the HTML file).</p>
-<p>The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike <em>Knit</em>, <em>Preview</em> does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.</p>
 <!-- rnb-text-end -->
 </div>
 
-<div id="rmd-source-code">LS0tCnRpdGxlOiAiTVNTUDY3OCIKb3V0cHV0OiBodG1sX25vdGVib29rCi0tLQojIEludGVycHJldGF0aW9uOgojIyAxLkJpbmFyeSBQcmVkaWN0b3IKIyMgMi5Db250aW51b3VzIFByZWRpY3RvcgojIyAzLkJpbmFyeSArIENvbnRpbnVvdXMKIyMgNC5JbnRlcmFjdGlvbjoKIyMgICAgICAtQmluYXJ5OiBDb250aW51b3VzIAojIyAgICAgIC1CaW5hcnk6IEJpbmFyeQojIyAgICAgIC1Db250aW51b3VzOiBDb250aW51b3VzCgotLS0KIyAxLkJpbmFyeSBQcmVkaWN0b3IKIGxtKGtpZC5zY29yZSB+IDEpIGlzIGVxdXZhbGVudCB0byBjYWxjdWxhdGluZyB0aGUgbWVhbiBvZiBraWQuc2NvcmUKIGxtKGtpZC5zY29yZSB+IG1vbi5ocykgdGhpcyBhdXRvbWF0aWNhbGx5IHNldCB0aGUgaHlwb3RoZXNpcyB0byAnMSttb24uaHMnLiBpZiB5b3UgZG8gbm90IHdpc2ggdG8gaW5jbHVkZSAxIGluIHlvdXIgZGVzaWduIG1hdHJpeCwgeW91IGhhdmUgdG8gc3BlY2lmeSAnbW9uLmhzIC0xJyBpbiB0aGUgYXJndW1lbnQKCiBmb3IgbG0oa2lkLnNjb3JlIH4gbW9uLmhzKSwgdGhlIGVxdWF0aW9uIHdpbGwgYmU6IHkgPSBiZXRhMCArIGJldGExKlhocyArIGVycm9ycwogaWYgWGhzID0gMSwgeSA9IGJldGEwICsgYmV0YTEsIGlmIFhocyA9IDAsIHkgPSBiZXRhMCwgCiB0aHVzIHRoZSBpbnRlcmNlcHQgYmV0YTAgaXMganVzdCB0aGUgYXZlcmFnZSBvZiBraWRzIElRIHdob3MgbW9uIGRpZCBub3QgZ3JhZHVhdGVkIGZyb20gaGlnaHNjaG9vbC4KIHRoZSBiZXRhMSBpcyB0aGUgZGlmZmVyZW5jZSBiZXR3ZWVuIHRoZSBtZWFuIG9mIGtpZCdzIElRIHdob3MgbW9uIGdyYWR1YXRlZCBmcm9tIGhpZ2hzY2hvb2wgdnMgZGlkIG5vdCBncmFkdWF0ZWQgZnJvbSBoaWdoc2Nob29sCiBiZWNhdXNlIGluIHRoaXMgY2FzZSwgd2l0aG91dCBhbmQgd2l0aCBoaWdoc2Nob29sIGFyZSBsYWJlbGxlZCAwLDEuIHNvIHRoZSBzbG9wZSBuYXRydWFsbHkgYmVjYW1lIHRoZSBkaWZmZXJlbmNlIG9mIHRoZSBtZWFuIGJldHdlZW4gdHdvIGNhdGVnb3JpZXMKCiBDb250cmFzdCBpcyBhIHdheSB0byBjb25zdHJ1Y3QgcHJlZGljdG9yIG1hdHJpeCBzdWNoIHRoYXQgdGhlIG1lYW4gb2Ygb25lIGVsZW1lbnQgd2l0aCBpbiB0aGUgcHJlZGljdG9ycyB3aWxsIGJlY2FtZSB0aGUgaW50ZXJjZXB0IG9mIHRoZSBtb2RlbAotLS0KIyAyLkNvbnRpbnVvdXMgUHJlZGljdG9yCiBsbShraWQuc2NvcmUgfiBtb24uaXEpIC0+IHkgPSBiZXRhMCArIGJldGExKlhpcS4gdGhlIGZpdHRlZCBtb2RlbDogYmV0YTAgPSAyNWlzaCwgYmV0YTEgPSAwLjYxCiBpbiB0aGlzIGNhc2UsIGJldGEwIGlzIGdldCB3aGVuIFhpcSA9IDAuIGJ1dCB0aGF0IGlzIG1lYW5pbmcgbGVzcyBpbiB0aGUgY29udGV4dCBvZiBJUS4gVGhlIGludGVyY2VwdCBpbiB0aGlzIGNhc2UgaXMgYSBvdmVyIGV4dHJhcG9sYXRpb24gb2YgdGhlIGRhdGEgYW5kIHRoZSBhY3R1YWwgbnVtYmVyIG9mIHRoZSBpbnRlcmNlcHQgbG9zZSBpdCdzIG1lYW5pbmcuCgogd2hlbiBleHRyYXBvbGF0aW5nIG91dHNpZGUgdGhlIGRhdGEsIHlvdSBnZW5lcmFsbHkgZ2V0IGEgbGFyZ2VyIGVycm9yLiBCdXQgaW4gbW9zdCBhcHBsaWNhdGlvbnMsIHBlb3BsZSBhdm9pZCBkb2luZyBpdCBiZWNhdXNlIHRoZXJlIGlzIHNpbXBseSBub3QgZW5vdWdoIGRhdGEgdG8gc3VwcG9ydCBhbnkgcG90ZW50aWFsIGNsYWltcy4KCiBpbiB0aGlzIGNhc2UsIGJldGExIGlzIHRoZSBkaWZmZXJlbmNlIGZvciBhIHVuaXQgZGlmZmVyZWNlIGluIG1vbidzIElRLiBiZWNhdXNlIHRoZSBkaWZmZXJlbmNlIG9mIDEgdW5pdCBkaWZmZXJlbmNlIGluIElRIGlzIHdheSB0b28gbWluaXNjdWxlIAotLS0KIyAzLkJpbmFyeSArIENvbnRpbnVvdXMKCiBsbShraWQuc2NvcmUgfiAxK21vbi5ocyArIG1vbi5pcSksIHkgPSBiZXRhMCArIGJldGExKlhocyArIGJldGEyKlhpcQogYmV0YTAgPSAyNS43MyArIDAuNTYqWGhzICsgNS45NSpYaXEKIEluIHRoaXMgY2FzZSwgYmV0YTAgbWVhbnMgdGhlIHNjb3JlIG9mIGtpZHMgd2l0aCAwIG1vbi5pcSBhbmQgbm8gaGlnaCBzY2hvb2wgZWR1Y2F0aW9uCgogdGhlIHJlc3VsdGluZyBtb2RlbCBjYW4gYmUgd3JpdHRlbiBhczogIAogICAgbW9uIHdpdGggbm8gSFM6ICR5ID0gMjUuNzMgKyAwLjU2WGlxJCAgCiAgICBtb24gd2l0aCBIUzogICAgJHkgPSAzMS42OCArIDAuNTZYaXEkICAKCkl0IGlzIGF0dGVtcHRpbmcgdG8gc2F5IHRoYXQgdGhlIG1vZGVsIGluZGljYXRlZCB0aGF0IHRoZSBlZmZlY3Qgb2YgbW9uJ3MgaGlnaHNjaG9vbCBzdGF0dXMgaGFzIGEgc3RhYmxlIGVmZmVjdCBhY3Jvc3MgYWxsIHRoZSBtb24ncyBJUS4gSG93ZXZlciwgdGhpcyBpcyBhY3R1YWxseSBub3QgYSByZXN1bHQgYnV0IGFuIGFzc3VtcHRpb24gd2hlbiB0aGUgQmluYXJ5ICsgQ29udGludW91cyBtb2RlbCBpcyBhcHBsaWVkIHRvIHRoZSBkYXRhc2V0LiBBcyBhIHN0YXRpc3RpYW4sIHlvdSBuZWVkIHRvIGZpZ3VyZSBvdXQgd2hldGhlciB0aGlzIGFzc3VtcHRpb24gaG9sZHMgd2hlbiB5b3UgYXJlIGFwcGx5aW5nIHRoZSBtb2RlbCB0byB0aGUgZGF0YXNldC4KLS0tCiMgNC4gSW50ZXJhdGlvbnMKICRsbShraWQuc2NvcmUgfiAxICsgbW9uLmhzICsgbW9uLmlxICsgbW9uLmhzKm1vbi5pcSkkLCAgIAogJHkgPSBiZXRhMCArIGJldGExKlhocyArIGJldGEyKlhpcSArIGJldGEzKlhocypYaXEkICAKIAogdGhlIHJlc3VsdHMgYXJlOiB5ID0gLTExLjQ4ICsgMC45NypYaXEgKyA1MS4yNypYaHMgLSAwLjQ4KlhpcSpYaHMKIAp0aGUgbW9kZWwgY29tZXMgZG93biB0bzogIAoKbm8gSFM6ICAgICR5ID0gLTExLjQ4ICsgMC45N1hpcSQgIAp3aXRoIEhTOiAgJHkgPSAtMTEuNDggKyAwLjQ4WGlxJCAgCgpUaGlzIG1vZGVsIGFzc3VtZXMgdGhhdCBtb3RoZXIncyBIUyBzdGF0dXMgd2lsbCBhZmZlY3QgaG93IHRoZSBzY2FsZSBvZiBtb3RoZXIncyBJUSBlZmZlY3Qgb24ga2lkJ3MgSVEuIFNvIGJlZm9yZSBpbnRlcnByZXQgYW55dGhpbmcgZnJvbSB0aGUgcmVzdWx0cywgdGhpcyBhc3N1bXB0aW9uIG5lZWRzIHRvIGJlIGV4YW1lZAoKCgoKVGhpcyBpcyBhbiBbUiBNYXJrZG93bl0oaHR0cDovL3JtYXJrZG93bi5yc3R1ZGlvLmNvbSkgTm90ZWJvb2suIFdoZW4geW91IGV4ZWN1dGUgY29kZSB3aXRoaW4gdGhlIG5vdGVib29rLCB0aGUgcmVzdWx0cyBhcHBlYXIgYmVuZWF0aCB0aGUgY29kZS4gCgpUcnkgZXhlY3V0aW5nIHRoaXMgY2h1bmsgYnkgY2xpY2tpbmcgdGhlICpSdW4qIGJ1dHRvbiB3aXRoaW4gdGhlIGNodW5rIG9yIGJ5IHBsYWNpbmcgeW91ciBjdXJzb3IgaW5zaWRlIGl0IGFuZCBwcmVzc2luZyAqQ21kK1NoaWZ0K0VudGVyKi4gCgpgYGB7cn0KcGxvdChjYXJzKQpgYGAKCkFkZCBhIG5ldyBjaHVuayBieSBjbGlja2luZyB0aGUgKkluc2VydCBDaHVuayogYnV0dG9uIG9uIHRoZSB0b29sYmFyIG9yIGJ5IHByZXNzaW5nICpDbWQrT3B0aW9uK0kqLgoKV2hlbiB5b3Ugc2F2ZSB0aGUgbm90ZWJvb2ssIGFuIEhUTUwgZmlsZSBjb250YWluaW5nIHRoZSBjb2RlIGFuZCBvdXRwdXQgd2lsbCBiZSBzYXZlZCBhbG9uZ3NpZGUgaXQgKGNsaWNrIHRoZSAqUHJldmlldyogYnV0dG9uIG9yIHByZXNzICpDbWQrU2hpZnQrSyogdG8gcHJldmlldyB0aGUgSFRNTCBmaWxlKS4gCgpUaGUgcHJldmlldyBzaG93cyB5b3UgYSByZW5kZXJlZCBIVE1MIGNvcHkgb2YgdGhlIGNvbnRlbnRzIG9mIHRoZSBlZGl0b3IuIENvbnNlcXVlbnRseSwgdW5saWtlICpLbml0KiwgKlByZXZpZXcqIGRvZXMgbm90IHJ1biBhbnkgUiBjb2RlIGNodW5rcy4gSW5zdGVhZCwgdGhlIG91dHB1dCBvZiB0aGUgY2h1bmsgd2hlbiBpdCB3YXMgbGFzdCBydW4gaW4gdGhlIGVkaXRvciBpcyBkaXNwbGF5ZWQuCgo=</div>
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiTVNTUDY3OCIKb3V0cHV0OiBodG1sX25vdGVib29rCi0tLQojIEludGVycHJldGF0aW9uOiAgCiAxLkJpbmFyeSBQcmVkaWN0b3IgIAogMi5Db250aW51b3VzIFByZWRpY3RvciAgCiAzLkJpbmFyeSArIENvbnRpbnVvdXMgIAogNC5JbnRlcmFjdGlvbjogIAogICAgICAtQmluYXJ5OiBDb250aW51b3VzICAgCiAgICAgIC1CaW5hcnk6IEJpbmFyeSAgCiAgICAgIC1Db250aW51b3VzOiBDb250aW51b3VzICAKCi0tLQojIDEuQmluYXJ5IFByZWRpY3RvcgogbG0oa2lkLnNjb3JlIH4gMSkgaXMgZXF1dmFsZW50IHRvIGNhbGN1bGF0aW5nIHRoZSBtZWFuIG9mIGtpZC5zY29yZQogbG0oa2lkLnNjb3JlIH4gbW9uLmhzKSB0aGlzIGF1dG9tYXRpY2FsbHkgc2V0IHRoZSBoeXBvdGhlc2lzIHRvICcxK21vbi5ocycuIGlmIHlvdSBkbyBub3Qgd2lzaCB0byBpbmNsdWRlIDEgaW4geW91ciBkZXNpZ24gbWF0cml4LCB5b3UgaGF2ZSB0byBzcGVjaWZ5ICdtb24uaHMgLTEnIGluIHRoZSBhcmd1bWVudAoKIGZvciBsbShraWQuc2NvcmUgfiBtb24uaHMpLCB0aGUgZXF1YXRpb24gd2lsbCBiZTogeSA9IGJldGEwICsgYmV0YTEqWGhzICsgZXJyb3JzCiBpZiBYaHMgPSAxLCB5ID0gYmV0YTAgKyBiZXRhMSwgaWYgWGhzID0gMCwgeSA9IGJldGEwLCAKIHRodXMgdGhlIGludGVyY2VwdCBiZXRhMCBpcyBqdXN0IHRoZSBhdmVyYWdlIG9mIGtpZHMgSVEgd2hvcyBtb24gZGlkIG5vdCBncmFkdWF0ZWQgZnJvbSBoaWdoc2Nob29sLgogdGhlIGJldGExIGlzIHRoZSBkaWZmZXJlbmNlIGJldHdlZW4gdGhlIG1lYW4gb2Yga2lkJ3MgSVEgd2hvcyBtb24gZ3JhZHVhdGVkIGZyb20gaGlnaHNjaG9vbCB2cyBkaWQgbm90IGdyYWR1YXRlZCBmcm9tIGhpZ2hzY2hvb2wKIGJlY2F1c2UgaW4gdGhpcyBjYXNlLCB3aXRob3V0IGFuZCB3aXRoIGhpZ2hzY2hvb2wgYXJlIGxhYmVsbGVkIDAsMS4gc28gdGhlIHNsb3BlIG5hdHJ1YWxseSBiZWNhbWUgdGhlIGRpZmZlcmVuY2Ugb2YgdGhlIG1lYW4gYmV0d2VlbiB0d28gY2F0ZWdvcmllcwoKIENvbnRyYXN0IGlzIGEgd2F5IHRvIGNvbnN0cnVjdCBwcmVkaWN0b3IgbWF0cml4IHN1Y2ggdGhhdCB0aGUgbWVhbiBvZiBvbmUgZWxlbWVudCB3aXRoIGluIHRoZSBwcmVkaWN0b3JzIHdpbGwgYmVjYW1lIHRoZSBpbnRlcmNlcHQgb2YgdGhlIG1vZGVsCi0tLQojIDIuQ29udGludW91cyBQcmVkaWN0b3IKIGxtKGtpZC5zY29yZSB+IG1vbi5pcSkgLT4geSA9IGJldGEwICsgYmV0YTEqWGlxLiB0aGUgZml0dGVkIG1vZGVsOiBiZXRhMCA9IDI1aXNoLCBiZXRhMSA9IDAuNjEKIGluIHRoaXMgY2FzZSwgYmV0YTAgaXMgZ2V0IHdoZW4gWGlxID0gMC4gYnV0IHRoYXQgaXMgbWVhbmluZyBsZXNzIGluIHRoZSBjb250ZXh0IG9mIElRLiBUaGUgaW50ZXJjZXB0IGluIHRoaXMgY2FzZSBpcyBhIG92ZXIgZXh0cmFwb2xhdGlvbiBvZiB0aGUgZGF0YSBhbmQgdGhlIGFjdHVhbCBudW1iZXIgb2YgdGhlIGludGVyY2VwdCBsb3NlIGl0J3MgbWVhbmluZy4KCiB3aGVuIGV4dHJhcG9sYXRpbmcgb3V0c2lkZSB0aGUgZGF0YSwgeW91IGdlbmVyYWxseSBnZXQgYSBsYXJnZXIgZXJyb3IuIEJ1dCBpbiBtb3N0IGFwcGxpY2F0aW9ucywgcGVvcGxlIGF2b2lkIGRvaW5nIGl0IGJlY2F1c2UgdGhlcmUgaXMgc2ltcGx5IG5vdCBlbm91Z2ggZGF0YSB0byBzdXBwb3J0IGFueSBwb3RlbnRpYWwgY2xhaW1zLgoKIGluIHRoaXMgY2FzZSwgYmV0YTEgaXMgdGhlIGRpZmZlcmVuY2UgZm9yIGEgdW5pdCBkaWZmZXJlY2UgaW4gbW9uJ3MgSVEuIGJlY2F1c2UgdGhlIGRpZmZlcmVuY2Ugb2YgMSB1bml0IGRpZmZlcmVuY2UgaW4gSVEgaXMgd2F5IHRvbyBtaW5pc2N1bGUKIAogCi0tLQojIDMuQmluYXJ5ICsgQ29udGludW91cwoKICRsbShraWQuc2NvcmUgfiAxK21vbi5ocyArIG1vbi5pcSkkLCAkeSA9IFxiZXRhXzAgKyBcYmV0YV8xKlhfe2hzfSArIFxiZXRhXzIqWF97aXF9JCAgCiAkXGJldGFfMCA9IDI1LjczICsgMC41NipYX3toc30gKyA1Ljk1Klhfe2lxfSQgIAogSW4gdGhpcyBjYXNlLCBiZXRhMCBtZWFucyB0aGUgc2NvcmUgb2Yga2lkcyB3aXRoIDAgbW9uLmlxIGFuZCBubyBoaWdoIHNjaG9vbCBlZHVjYXRpb24gIAoKIHRoZSByZXN1bHRpbmcgbW9kZWwgY2FuIGJlIHdyaXR0ZW4gYXM6ICAKICAgIG1vbiB3aXRoIG5vIEhTOiAkeSA9IDI1LjczICsgMC41Nlhfe2lxfSQgIAogICAgbW9uIHdpdGggSFM6ICAgICR5ID0gMzEuNjggKyAwLjU2WF97aXF9JCAgIAoKICAKSXQgaXMgYXR0ZW1wdGluZyB0byBzYXkgdGhhdCB0aGUgbW9kZWwgaW5kaWNhdGVkIHRoYXQgdGhlIGVmZmVjdCBvZiBtb24ncyBoaWdoc2Nob29sIHN0YXR1cyBoYXMgYSBzdGFibGUgZWZmZWN0IGFjcm9zcyBhbGwgdGhlIG1vbidzIElRLiBIb3dldmVyLCB0aGlzIGlzIGFjdHVhbGx5IG5vdCBhIHJlc3VsdCBidXQgYW4gYXNzdW1wdGlvbiB3aGVuIHRoZSBCaW5hcnkgKyBDb250aW51b3VzIG1vZGVsIGlzIGFwcGxpZWQgdG8gdGhlIGRhdGFzZXQuIEFzIGEgc3RhdGlzdGlhbiwgeW91IG5lZWQgdG8gZmlndXJlIG91dCB3aGV0aGVyIHRoaXMgYXNzdW1wdGlvbiBob2xkcyB3aGVuIHlvdSBhcmUgYXBwbHlpbmcgdGhlIG1vZGVsIHRvIHRoZSBkYXRhc2V0LiAgCgoKLS0tCiMgNC4gSW50ZXJhdGlvbnMKICRsbShraWQuc2NvcmUgfiAxICsgbW9uLmhzICsgbW9uLmlxICsgbW9uLmhzKm1vbi5pcSkkLCAgIAogJHkgPSBcYmV0YV8wICsgXGJldGFfMVhfe2hzfSArIFxiZXRhXzJYX3tpcX0gKyBcYmV0YV8zWF97aHN9WF97aXF9JCAgCiAKIHRoZSByZXN1bHRzIGFyZTogeSA9IC0xMS40OCArIDAuOTcqWGlxICsgNTEuMjcqWGhzIC0gMC40OCpYaXEqWGhzCiAKdGhlIG1vZGVsIGNvbWVzIGRvd24gdG86ICAKCm5vIEhTOiAgICAkeSA9IC0xMS40OCArIDAuOTdYaXEkICAKd2l0aCBIUzogICR5ID0gLTExLjQ4ICsgMC40OFhpcSQgIAoKVGhpcyBtb2RlbCBhc3N1bWVzIHRoYXQgbW90aGVyJ3MgSFMgc3RhdHVzIHdpbGwgYWZmZWN0IGhvdyB0aGUgc2NhbGUgb2YgbW90aGVyJ3MgSVEgZWZmZWN0IG9uIGtpZCdzIElRLiBTbyBiZWZvcmUgaW50ZXJwcmV0IGFueXRoaW5nIGZyb20gdGhlIHJlc3VsdHMsIHRoaXMgYXNzdW1wdGlvbiBuZWVkcyB0byBiZSBleGFtZWQKCgoKCg==</div>
 
 
 

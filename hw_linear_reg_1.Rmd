@@ -1,6 +1,6 @@
 ---
 title: "MA678 homework 01"
-author: "yourname"
+author: "WEILING LI"
 date: "Septemeber 6, 2018"
 output:
   pdf_document: default
@@ -11,7 +11,7 @@ output:
 \newcommand{\rv}[1]{\underline{#1}} 
 
 ```{r setup, include=FALSE}
-pacman::p_load(ggplot2, knitr, arm, data.table,Cairo)
+pacman::p_load(ggplot2, knitr, arm, data.table,Cairo,foreign,plot3D,tidyverse)
 knitr::opts_chunk$set(echo = TRUE,dev="CairoPNG",fig.align = "center", 
                       fig.width = 5.656, fig.height = 4, global.par = TRUE)
 par (mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
@@ -31,32 +31,56 @@ This is not intended to be easy so please come see us to get help.
 gelman_example_dir<-"http://www.stat.columbia.edu/~gelman/arm/examples/"
 pyth <- read.table (paste0(gelman_example_dir,"pyth/exercise2.1.dat"),
                     header=T, sep=" ")
+write.table(pyth, "~/Desktop/MSSP\ MA\ 678/MA678/pyth.txt",sep = " ")
+
 ```
 
 The folder pyth contains outcome `y` and inputs `x1`, `x2` for 40 data points, with a further 20 points with the inputs but no observed outcome. Save the file to your working directory and read it into R using the `read.table()` function.
-
+```{r}
+pyth = read.table(file = "pyth.txt",sep = " ")
+```
 1. Use R to fit a linear regression model predicting `y` from `x1`,`x2`, using the first 40 data points in the file. Summarize the inferences and check the fit of your model.
 ```{r}
-
-
+pyth40 = head(pyth,40)
+#hist(pyth40$x1)
+#hist(log(pyth40$y))
+#hist(log(pyth40$x2))
+pythfit = lm(y ~ x1 + x2 , data = pyth40 )
+summary(pythfit)
+#plot(y ~ x1 + x2, data = pyth40)
+#display(pythfit)
+#fitpoints = predict(pythfit)
 ```
 
 2. Display the estimated model graphically as in (GH) Figure 3.2.
 ```{r}
+ggplot(data = pyth40)+
+  geom_point() + aes(x = x2, y = y - coef(pythfit)[2]*x1)+geom_abline(intercept = coef(pythfit)[1], slope = coef(pythfit)[3],size = 1, color = "red")+xlab("x2")+ylab("y-beta1*x1")
 
+ggplot(data = pyth40)+
+  geom_point() + aes(x = x1, y = y - coef(pythfit)[1]*x2)+geom_abline(intercept = coef(pythfit)[1], slope = coef(pythfit)[2],size = 1, color = "orange")+xlab("x1")+ylab("y-beta2*x2")
 ```
 
 3. Make a residual plot for this model. Do the assumptions appear to be met?
 ```{r}
-
+#Residual Plot
+plot(pythfit,which =1,title("Residual Plot"))
+#QQ plot
+plot(pythfit,which =2)
 ```
+Judging from the plot, the assumptions for linear regression for this particular model is not met. the variance of errors is not equal. Especially, the variance of x1 is really large compared to the variance of x2.
 
 4. Make predictions for the remaining 20 data points in the file. How confident do you feel about these predictions?
 ```{r}
-
+pyth.tail = tail(pyth, 20)
+pyth.pred = predict(pythfit,newdata = pyth.tail)
+#pyth.pred1 = predict(pythfit,newdata = pyth.tail[-1])
+ggplot()+geom_point()+aes(x=predict(pythfit),y = pyth40$y)+geom_abline(intercept = 0, slope = 1,color = "yellow",size = 1.5)+xlim(c(3,22))+ylim(c(3,22))+xlab("y_hat")+ylab("y")
 ```
+Judging from the outcome from the plot above and the residual plot. the prediction is actually a okay estimate for larger predicted y values(maybe over 15?).
 
 After doing this exercise, take a look at Gelman and Nolan (2002, section 9.4) to see where these data came from. (or ask Masanao)
+
 
 ### Earning and height
 Suppose that, for a certain population, we can predict log earnings from log height as follows:
@@ -65,7 +89,11 @@ Suppose that, for a certain population, we can predict log earnings from log hei
 - Every increase of 1% in height corresponds to a predicted increase of 0.8% in earnings.
 - The earnings of approximately 95% of people fall within a factor of 1.1 of predicted values.
 
-1. Give the equation of the regression line and the residual standard deviation of the regression.
+1. Give the equation of the regression line and the residual standard deviation of the regression.  
+The regression equation can be written as:
+$lny = \beta_0 + \beta_1 lnh$    
+
+We know that for 66inches height, the predicted earnings is $30,000 and every increase of 1% in height corresponds to a predicted increase of 0.8% in earnings.
 
 2. Suppose the standard deviation of log heights is 5% in this population. What, then, is the $R^2$ of the regression model described here?
 
@@ -74,13 +102,25 @@ Suppose that, for a certain population, we can predict log earnings from log hei
 The folder beauty contains data from Hamermesh and Parker (2005) on student evaluations of instructors' beauty and teaching quality for several courses at the University of Texas. The teaching evaluations were conducted at the end of the semester, and the beauty judgments were made later, by six students who had not attended the classes and were not aware of the course evaluations.
 ```{r}
 beauty.data <- read.table (paste0(gelman_example_dir,"beauty/ProfEvaltnsBeautyPublic.csv"), header=T, sep=",")
+
+ggplot(data = beauty.data,aes(x = as.factor(nonenglish), y = courseevaluation,fill = as.factor(female)))+geom_violin(trim=FALSE)+geom_boxplot()+stat_summary(fun.ymin = min, fun.ymax = max, fun.y = mean,color = "orange",size = 1)
 ```
 
 1. Run a regression using beauty (the variable btystdave) to predict course evaluations (courseevaluation), controlling for various other inputs. Display the fitted model graphically, and explaining the meaning of each of the coefficients, along with the residual standard deviation. Plot the residuals versus fitted values.
 
 ```{r}
+#hist(beauty.data$btystdave^(1/3))
+e1071::skewness(beauty.data$btystdave)
+e1071::skewness(beauty.data$courseevaluation)
+#hist(beauty.data$courseevaluation^2)
 
+beautyfit = lm(beauty.data$courseevaluation ~ beauty.data$btystdave)
+summary(beautyfit)
 
+ggplot(data = beauty.data)+geom_point()+aes(x = btystdave, y = courseevaluation)+geom_abline(intercept = coef(beautyfit)[1],slope = coef(beautyfit)[2],color = "yellow",size = 1.5)
+
+plot(beautyfit,which = 1)
+plot(beautyfit,which = 2)
 ```
 
 2. Fit some other models, including beauty and also other input variables. Consider at least one model with interactions. For each model, state what the predictors are, and what the inputs are, and explain the meaning of each of its coefficients.

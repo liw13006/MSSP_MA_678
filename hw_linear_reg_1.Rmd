@@ -47,7 +47,7 @@ pyth40 = head(pyth,40)
 #hist(log(pyth40$x2))
 pythfit = lm(y ~ x1 + x2 , data = pyth40 )
 summary(pythfit)
-#plot(y ~ x1 + x2, data = pyth40)
+#ggplot(data = pyth40)+aes(x = x1^2 + x2^2, y = y^2)+geom_point()
 #display(pythfit)
 #fitpoints = predict(pythfit)
 ```
@@ -90,11 +90,24 @@ Suppose that, for a certain population, we can predict log earnings from log hei
 - The earnings of approximately 95% of people fall within a factor of 1.1 of predicted values.
 
 1. Give the equation of the regression line and the residual standard deviation of the regression.  
-The regression equation can be written as:
-$lny = \beta_0 + \beta_1 lnh$    
+The regression equation can be written as:  
+$ln(earnings) = \beta_0 + \beta_1 ln(heights)$    
 
-We know that for 66inches height, the predicted earnings is $30,000 and every increase of 1% in height corresponds to a predicted increase of 0.8% in earnings.
-
+We know that for 66inches height, the predicted earnings is $30,000 and every increase of 1% in height corresponds to a predicted increase of 0.8% in earnings. These two constraints will translate to:  
+$ln(30000) = \beta_0 + \beta_1 \times ln(66)$ (1)   
+$ln(1.008 \times earnings) = \beta_0 + \beta_1 \times ln(1.01 \times height)$  (2)  
+take exponential of equation (2) we get:  
+$1.008 \times e^{\beta_0} \times e^{beta_1 \times ln(height)} = e^{\beta_0} \times e^{beta_1 \times ln(1.01 \times height)}$  
+$1.01^{\beta_1} = 1.008$  
+$\beta_1 = log_{1.01}(1.008)$  (3)
+By substituing eq.(3) to eq.(1), we can get:  
+$\beta_0 = ln(30000) - log_{1.01}1.008 \times ln(66)$
+```{r, echo = FALSE}
+beta1  = log(1.008,base = 1.01)
+print(c("beta1=",beta1))
+beta0 = log(30000) - beta1*log(66)
+print(c("beta0=",beta0))
+```
 2. Suppose the standard deviation of log heights is 5% in this population. What, then, is the $R^2$ of the regression model described here?
 
 ### Beauty and student evaluation 
@@ -104,14 +117,16 @@ The folder beauty contains data from Hamermesh and Parker (2005) on student eval
 beauty.data <- read.table (paste0(gelman_example_dir,"beauty/ProfEvaltnsBeautyPublic.csv"), header=T, sep=",")
 
 ggplot(data = beauty.data,aes(x = as.factor(nonenglish), y = courseevaluation,fill = as.factor(female)))+geom_violin(trim=FALSE)+geom_boxplot()+stat_summary(fun.ymin = min, fun.ymax = max, fun.y = mean,color = "orange",size = 1)
+
+
 ```
 
 1. Run a regression using beauty (the variable btystdave) to predict course evaluations (courseevaluation), controlling for various other inputs. Display the fitted model graphically, and explaining the meaning of each of the coefficients, along with the residual standard deviation. Plot the residuals versus fitted values.
 
-```{r}
+```{r, echo=FALSE}
 #hist(beauty.data$btystdave^(1/3))
-e1071::skewness(beauty.data$btystdave)
-e1071::skewness(beauty.data$courseevaluation)
+#e1071::skewness(beauty.data$btystdave)
+#e1071::skewness(beauty.data$courseevaluation)
 #hist(beauty.data$courseevaluation^2)
 
 beautyfit = lm(beauty.data$courseevaluation ~ beauty.data$btystdave)
@@ -120,15 +135,36 @@ summary(beautyfit)
 ggplot(data = beauty.data)+geom_point()+aes(x = btystdave, y = courseevaluation)+geom_abline(intercept = coef(beautyfit)[1],slope = coef(beautyfit)[2],color = "yellow",size = 1.5)
 
 plot(beautyfit,which = 1)
-plot(beautyfit,which = 2)
+#plot(beautyfit,which = 2)
 ```
+By observing the bystdave value, this is the Z-score transformed value of the beauty rating, so the intercept 4.01 means the average course evaluation score for average instructor's beauty rating.
+
+The slope means for every $\sigma$ increase in beauty rating of instructor, the course evaluation score will increase 0.133
+
+The residual standard error shows the variability of actual observations spead around the predicted values. The residual plot actually shows that the variability is high but roughly evenly spreaded around the predicted value.  
 
 2. Fit some other models, including beauty and also other input variables. Consider at least one model with interactions. For each model, state what the predictors are, and what the inputs are, and explain the meaning of each of its coefficients.
 
-```{r}
-
-
+```{r, echo=FALSE}
+model1 = lm(data = beauty.data, courseevaluation ~ btystdave + female)
+summary(model1)
+ggplot(data = beauty.data) + aes(x = btystdave,y = courseevaluation,color = as.factor(female)) +geom_point()+geom_abline(intercept = coef(model1)[1],slope = coef(model1)[2],color = "orange",size = 1)+geom_abline(intercept = coef(model1)[1]+coef(model1)[3],slope = coef(model1)[2],color = "blue",size = 1)
 ```
+The model shown above shows a model with 1 binary predictor:female and 1 continuous predictor: btystdave with no interaction term. The model can be written as follows:  
+$courseeval = \beta_0 + \beta_1 \times btystdave + \beta_2 \times female$
+with the binary components taking $0$ or $1$, the model can be describes as two regression lines
+$courseeval = \beta_0 + \beta_1 \times btystdave$ is the model for men  
+$courseeval = (\beta_0+\beta_2) + \beta_1 \times btystdave$ is the model for women  
+Coef $\beta_0$ is the average course eval score $4.09$ for male instructor with mean beauty eval.  
+Coef $\beta_1$ describes that for 1 $\sigma$ increase in beauty rating(regardless male of female) the course eval will increase $0.2$.  
+Coef $\beta_2$ is the difference of the mean course eval between two genders, averagely, female instructors are graded 0.11 less than male instructors
+
+```{r,echo=FALSE}
+model2 = lm(data = beauty.data, courseevaluation ~ btystdave + female + btystdave * female)
+summary(model2)
+ggplot(data = beauty.data) + aes(x = btystdave,y = courseevaluation,color = as.factor(female)) +geom_point()+geom_abline(intercept = coef(model2)[1],slope = coef(model2)[2],size = 1,color = "orange") + geom_abline(intercept = coef(model2)[1] + coef(model2)[3],slope = coef(model2)[2]+coef(model2)[4],size = 1,color = "blue" )
+```
+Similarily as the previous model. the only difference is the interaction term between $btystdave$ and $female$. the coefficient of the interaction term states that for female instructors every $\sigma$ increase of beauty rating will averagely result in -0.113 less increase in course evaluation score compared to male instructors.  
 
 See also Felton, Mitchell, and Stinson (2003) for more on this topic 
 [link](http://papers.ssrn.com/sol3/papers.cfm?abstract_id=426763)
@@ -143,7 +179,7 @@ Note: This is more like a demo to show you that you can get statistically signif
 
 1. First generate 1000 data points from a normal distribution with mean 0 and standard deviation 1 by typing in R. Generate another variable in the same way (call it var2).
 
-```{r, eval=FALSE}
+```{r}
 var1 <- rnorm(1000,0,1)
 var2 <- rnorm(1000,0,1)
 ```
@@ -158,7 +194,7 @@ z.scores
 
 2. Now run a simulation repeating this process 100 times. This can be done using a loop. From each simulation, save the z-score (the estimated coefficient of var1 divided by its standard error). If the absolute value of the z-score exceeds 2, the estimate is statistically significant. Here is code to perform the simulation:
 
-```{r, eval=FALSE}
+```{r}
 z.scores <- rep (NA, 100) 
 for (k in 1:100) {
   var1 <- rnorm (1000,0,1)

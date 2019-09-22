@@ -1,7 +1,7 @@
 ---
 title: "Homework 02"
-author: "yourname"
-date: "Septemeber 16, 2018"
+author: "Weiling Li"
+date: "Septemeber 21, 2019"
 output:
   pdf_document: default
 ---
@@ -13,7 +13,7 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,dev="CairoPNG",fig.align = "center", 
                       fig.width = 5.656, fig.height = 4, global.par = TRUE)
-pacman::p_load("arm","data.table","Cairo","faraway","foreign","ggplot2","knitr")
+pacman::p_load("arm","data.table","Cairo","faraway","foreign","tidyverse","knitr","kableExtra","ImageMagick")
 par (mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
 ```
 
@@ -31,27 +31,97 @@ You can find the codebook at http://www.stat.columbia.edu/~gelman/arm/examples/e
 ```{r}
 gelman_dir <- "http://www.stat.columbia.edu/~gelman/arm/examples/"
 heights    <- read.dta (paste0(gelman_dir,"earnings/heights.dta"))
+#wfw90    <- read.table (paste0(gelman_dir,"earnings/wfw90.dat"))
 ```
 
 Pull out the data on earnings, sex, height, and weight.
 
 1. In R, check the dataset and clean any unusually coded data.
 
+The dataset has 9 variables, from the code book, they mean the following:  
+
+\begin{itemize}
+    \item earn: personal income during year 1989, in dollars.  
+    \item height1: height in inches %/% 12.  
+    \item height2: height in inches %% 12.  
+    \item sex:  
+    \begin{itemize}
+      \item male: 1  
+      \item female: 2  
+    \end{itemize}
+    \item race:  
+    \begin{itemize}
+      \item white: 1  
+      \item black: 2  
+      \item asian: 3  
+      \item native amerian: 4  
+      \item others: 5  
+    \end{itemize}
+    \item hisp:  
+    \begin{itemize}
+      \item hispanic origin: 1  
+      \item otherwise: 2  
+    \end{itemize}
+    \item ed: highest grade or years in school(highest grade converted           to years in school) from 0 to 18, integers.  
+    \item yearbn: year of born in 19xx.    
+    \item height: interviewee's height in inches, rounded to nearest             integer. 
+\end{itemize}    
+
 ```{r}
-
+## Earnings has NA value and 0 value, which needs to be cleaned. 
+## Also, to better managing data. original data had been put in tibble form.
+## For the purpose of this HW, only earn,sex,race,ed & height were kept
+h1 <- filter(filter(as_tibble(heights),!is.na(earn)),earn >0)%>%select(earn,sex,race,yearbn,ed,height)
+#hist(log(h1$earn),probability = T)
+#hist(h1$ed,probability = T)
+#hist(h1$height,probability = T)
 ```
-
 2. Fit a linear regression model predicting earnings from height. What transformation should you perform in order to interpret the intercept from this model
 as average earnings for people with average height?
 
 ```{r}
+#to achieve what exactly asked. we only need to subtract height with mean.
+h1 <- mutate(h1,h.centered = height - mean(h1$height))
+#hist(height.centered)
+#hist(h1$height)
+ggplot(h1)+
+  aes(x = h.centered, y = earn)+geom_point()+geom_smooth(method = 'lm',se = F)+ggtitle(paste0('intercept = ',toString(round(coef(lm(data = h1, earn ~ h.centered))[1],2))))+theme(plot.title = element_text(size = 32,hjust = .5))
 
+#however, as can be seen from the residual plot and the histogram of earn, the skewness of the earn causes the residual to be distributed unevenly
+ggplot(h1)+aes(x = earn)+geom_histogram(bins = 30,alpha = .4,aes(y=..density..))+geom_density()
+ggplot(lm(data = h1, earn ~ h.centered)) + aes(x=.fitted, y=.resid)+
+  geom_point()+geom_abline(intercept = 0,slope = 0,color='orange',size=1)+geom_smooth(method = 'loess',alpha = .4)
+
+#this violates the assumption of linear regression, to better achieve the results. One should at 1st regularize the earning, by taking a log transformation, the skewness issue had been greatly improved.
 ```
 
 3. Fit some regression models with the goal of predicting earnings from some
-combination of sex, height, and weight. Be sure to try various transformations and interactions that might make sense. Choose your preferred model and justify.
-
+combination of sex, height, and age. Be sure to try various transformations and interactions that might make sense. Choose your preferred model and justify.  
+census data: [us 1990 census](https://www2.census.gov/library/publications/decennial/1990/cp-1/cp-1-1.pdf#)
 ```{r}
+## for better interpretation and simplicity, the following transformation of the data set is done as follows:
+## take log transformation of the earning
+## substract sex with 1 to make the variable a binary with 0 indicate male and 1 indicate female.
+## 89 - yearbn to get the approximate age for the interviewee as they report their earning. to ensure no negative value occurs, for yearbn>88, we use 189 - yearbn(this is due to the survey only allows people to write their last 2 digits of year borned, resulting poeple born in late 1800s have a negative age.)
+h.transformed <- mutate(h1,log.earn = log(earn)) %>% mutate(sex = sex - 1) %>% mutate(age = ifelse(yearbn>=88, 189 - yearbn,89 - yearbn))
+## A sample of the transformed data is shown below
+kable(sample_n(h.transformed,10,replace = T)%>%select(log.earn,sex,h.centered,age),format = 'latex',digits = 2)
+##check race factor:
+kable(group_by(h.transformed,race)%>%summarise(count.race = n()),format = 'latex')
+## as can be seen the majority interviewees are white, less than 10% are black and less than 2% are other races. 
+## The 1990 census data shows that about 80% american population is white, 12% is black and the remaining is considered others. from this stand point. besides the white population is over represented in the sample survey and other races under-represented. From the race stand point, the sample is valid. However, because the observations of races other than white is too low, spliting the data by race is not a good idea. One should do either an analysis on white only or ignore the race factor.
+#ggplot(h.transformed)+aes(x = h.centered,y = log.earn,color = as.factor(sex))+geom_point()+geom_smooth(method='lm',se = F)
+
+## Lets see how our variables natrually distributed under gender factors
+## height
+ggplot(h.transformed)+aes(x = h.centered,color = as.factor(sex))+geom_density( alpha = .4)+geom_histogram(bins = 30,alpha = .4,aes(y=..density..),fill = NA )
+ggplot(h.transformed)+aes(x = h.centered,y = log.earn,color = as.factor(sex))+geom_jitter()+geom_smooth(method='loess')
+## age
+ggplot(h.transformed)+aes(x = age,color = as.factor(sex))+geom_density( alpha = .4)+geom_histogram(bins = 30,alpha = .4,aes(y=..density..),fill = NA )
+ggplot(h.transformed)+aes(x = age,y = log.earn,color = as.factor(sex))+geom_jitter()+geom_smooth(method='loess')
+## education
+ggplot(h.transformed)+aes(x = ed,color = as.factor(sex))+geom_density( alpha = .4)+geom_histogram(bins = 30,alpha = .4,aes(y=..density..),fill = NA )
+ggplot(h.transformed)+aes(x = ed,y = log.earn,color = as.factor(sex))+geom_jitter()+geom_smooth(method='loess')
 
 ```
 

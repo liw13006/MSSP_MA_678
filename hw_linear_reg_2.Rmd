@@ -55,7 +55,7 @@ The dataset has 9 variables, from the code book, they mean the following:
       \item black: 2  
       \item asian: 3  
       \item native amerian: 4  
-      \item others: 5  
+      \item others: 9  
     \end{itemize}
     \item hisp:  
     \begin{itemize}
@@ -85,7 +85,7 @@ h1 <- mutate(h1,h.centered = height - mean(h1$height))
 #hist(height.centered)
 #hist(h1$height)
 ggplot(h1)+
-  aes(x = h.centered, y = earn)+geom_point()+geom_smooth(method = 'lm',se = F)+ggtitle(paste0('intercept = ',toString(round(coef(lm(data = h1, earn ~ h.centered))[1],2))))+theme(plot.title = element_text(size = 32,hjust = .5))
+  aes(x = h.centered, y = earn)+geom_point()+geom_smooth(method = 'lm',se = F)+ggtitle(paste0('intercept = ',toString(round(coef(lm(data = h1, earn ~ h.centered))[1],2))))+theme(plot.title = element_text(size = 28,hjust = .5))
 
 #however, as can be seen from the residual plot and the histogram of earn, the skewness of the earn causes the residual to be distributed unevenly
 ggplot(h1)+aes(x = earn)+geom_histogram(bins = 30,alpha = .4,aes(y=..density..))+geom_density()
@@ -97,13 +97,14 @@ ggplot(lm(data = h1, earn ~ h.centered)) + aes(x=.fitted, y=.resid)+
 
 3. Fit some regression models with the goal of predicting earnings from some
 combination of sex, height, and age. Be sure to try various transformations and interactions that might make sense. Choose your preferred model and justify.  
-census data: [us 1990 census](https://www2.census.gov/library/publications/decennial/1990/cp-1/cp-1-1.pdf#)
+census data: [us 1990 census](https://www2.census.gov/library/publications/decennial/1990/cp-1/cp-1-1.pdf#)\newline
+codebook: [wfwcodebook.txt](http://www.stat.columbia.edu/~gelman/arm/examples/earnings/wfwcodebook.txt)\newline
 ```{r}
 ## for better interpretation and simplicity, the following transformation of the data set is done as follows:
 ## take log transformation of the earning
 ## substract sex with 1 to make the variable a binary with 0 indicate male and 1 indicate female.
-## 89 - yearbn to get the approximate age for the interviewee as they report their earning. to ensure no negative value occurs, for yearbn>88, we use 189 - yearbn(this is due to the survey only allows people to write their last 2 digits of year borned, resulting poeple born in late 1800s have a negative age.)
-h.transformed <- mutate(h1,log.earn = log(earn)) %>% mutate(sex = sex - 1) %>% mutate(age = ifelse(yearbn>=88, 189 - yearbn,89 - yearbn))
+## 90 - yearbn to get the approximate age for the interviewee as they report their earning. to ensure no negative value occurs, for yearbn>72, we use 190 - yearbn(The sample was taken in a way that it only collects information from individuals older than 18. thus any age less than 18 was resulted by birth year before 1900)
+h.transformed <- mutate(h1,log.earn = log(earn)) %>% mutate(sex = sex - 1) %>% mutate(age = ifelse(yearbn>72, 190 - yearbn,90 - yearbn))
 ## A sample of the transformed data is shown below
 kable(sample_n(h.transformed,10,replace = T)%>%select(log.earn,sex,h.centered,age),format = 'latex',digits = 2)
 ##check race factor:
@@ -124,7 +125,7 @@ ggplot(h.transformed)+aes(x = ed,color = as.factor(sex))+geom_density( alpha = .
 ggplot(h.transformed)+aes(x = ed,y = log.earn,color = as.factor(sex))+geom_jitter()+geom_smooth(method='loess')
 
 ```
-
+One can observed from the histogram that height variable is unevenly distributed between genders. female has a mean roughly 3 inches below average while male roughly 4 inches above average with both genders have an approximated sample standard error at 2.5 inches. This fact approximately puts the mean of one gender out of 2 standard errors of the opposite gender. in this case, when we are predicting using height variable, we inevitably have to use gender to separate them. Also, because gender had seperated heights into two clusters, it is better to introduce interaction terms $height \times gender$ to ensure linear regression models the two genders differently on the 
 4. Interpret all model coefficients.
 
 ```{r}

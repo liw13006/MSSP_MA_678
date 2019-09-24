@@ -40,35 +40,34 @@ Pull out the data on earnings, sex, height, and weight.
 
 1. In R, check the dataset and clean any unusually coded data.
 
-The dataset has 9 variables, from the code book, they mean the following:  
+The dataset has 9 variables, from the code book, they mean the following:    
 
-\begin{itemize}
-    \item earn: personal income during year 1989, in dollars.  
-    \item height1: height in inches %/% 12.  
-    \item height2: height in inches %% 12.  
-    \item sex:  
-    \begin{itemize}
-      \item male: 1  
-      \item female: 2  
-    \end{itemize}
-    \item race:  
-    \begin{itemize}
-      \item white: 1  
-      \item black: 2  
-      \item asian: 3  
-      \item native amerian: 4  
-      \item others: 9  
-    \end{itemize}
-    \item hisp:  
-    \begin{itemize}
-      \item hispanic origin: 1  
-      \item otherwise: 2  
-    \end{itemize}
-    \item ed: highest grade or years in school(highest grade converted to years in school) from 0 to 18, integers.  
-    \item yearbn: year of born in 19xx.    
-    \item height: interviewee's height in inches, rounded to nearest integer. 
-\end{itemize}    
+* earn: personal income during year 1989, in dollars.
+  - height1: height in inches %/% 12.
+  - height2: height in inches %% 12. 
 
+* sex:
+  - male: 1
+  - female: 2
+
+* race:
+  - white: 1
+  - black: 2
+  - asian: 3
+  - native amerian: 4
+  - others: 9 
+
+* hisp:
+  - hispanic origin: 1
+  - otherwise: 2
+
+* highest grade or years in school(highest grade converted to years in school) from 0 to 18, integers.
+
+* yearbn: year of born in 19xx.
+
+* height: interviewee's height in inches, rounded to nearest integer.
+
+\newline
 ```{r}
 ## Earnings has NA value and 0 value, which needs to be cleaned. 
 ## Also, to better managing data. original data had been put in tibble form.
@@ -168,14 +167,19 @@ $$earn = exp(\beta0) \cdot exp(\beta_2)^{age} \cdot exp(\beta_3)^{age^2}$$
 female will have: 
 $$earn =  exp(\beta0\cdot\beta_1) \cdot exp(\beta_2\cdot\beta_4)^{age} \cdot exp(\beta_3\beta_5)^{age^2}$$
 The interpretation follows as:
-\begin{itemize}
-  \item $exp(\beta_0) = 8605.78$ is the mean earning for minimun age 18 as male which 8605.78.
-  \item $exp(\beta_1) = 0.90$ means at same age, female with minimun age 18 earns 90% of male.
-  \item $exp(\beta_2) = 1.09$ means for male, 1 years older averagely result in 9% increase on earning.
-  \item $exp(\beta_3) = 0.998$ means for male, 1 unit larger in $age^2$ result in 0.2% decrese on earning.
-  \item $exp(\beta_4) = 0.96$ means for female, compare to male, can expect 4% less increase in earning for unit increase in age.
-  \item $exp(\beta_5) = 1.00$ means for female, compare to male, can expect the same 0.2% decrese on earning for unit increase in age^2
-\end{itemize}
+* $exp(\beta_0) = 8605.78$ is the mean earning for minimun age 18 as male which 8605.78.
+
+* $exp(\beta_1) = 0.90$ means at same age, female with minimun age 18 earns 90% of male.
+
+* $exp(\beta_2) = 1.09$ means for male, 1 years older averagely result in 9% increase on earning.
+
+* $exp(\beta_3) = 0.998$ means for male, 1 unit larger in $age^2$ result in 0.2% decrese on earning.
+
+* $exp(\beta_4) = 0.96$ means for female, compare to male, can expect 4% less increase in earning for unit increase in age.
+
+* $exp(\beta_5) = 1.00$ means for female, compare to male, can expect the same 0.2% decrese on earning for unit increase in age^2.
+
+\newline
 5. Construct 95% confidence interval for all model coefficients and discuss what they mean.
 
 ```{r,echo=FALSE}

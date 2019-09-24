@@ -3,6 +3,8 @@ title: "Homework 02"
 author: "Weiling Li"
 date: "Septemeber 21, 2019"
 output:
+  html_document:
+    df_print: paged
   pdf_document: default
 ---
 
@@ -62,9 +64,9 @@ The dataset has 9 variables, from the code book, they mean the following:
       \item hispanic origin: 1  
       \item otherwise: 2  
     \end{itemize}
-    \item ed: highest grade or years in school(highest grade converted           to years in school) from 0 to 18, integers.  
+    \item ed: highest grade or years in school(highest grade converted to years in school) from 0 to 18, integers.  
     \item yearbn: year of born in 19xx.    
-    \item height: interviewee's height in inches, rounded to nearest             integer. 
+    \item height: interviewee's height in inches, rounded to nearest integer. 
 \end{itemize}    
 
 ```{r}
@@ -106,9 +108,9 @@ codebook: [wfwcodebook.txt](http://www.stat.columbia.edu/~gelman/arm/examples/ea
 ## 90 - yearbn to get the approximate age for the interviewee as they report their earning. to ensure no negative value occurs, for yearbn>72, we use 190 - yearbn(The sample was taken in a way that it only collects information from individuals older than 18. thus any age less than 18 was resulted by birth year before 1900)
 h.transformed <- mutate(h1,log.earn = log(earn)) %>% mutate(sex = sex - 1) %>% mutate(age = ifelse(yearbn>72, 190 - yearbn,90 - yearbn))
 ## A sample of the transformed data is shown below
-kable(sample_n(h.transformed,10,replace = T)%>%select(log.earn,sex,h.centered,age),format = 'latex',digits = 2)
+kable(sample_n(h.transformed,10,replace = T)%>%select(log.earn,sex,h.centered,age),format = 'html',digits = 2)
 ##check race factor:
-kable(group_by(h.transformed,race)%>%summarise(count.race = n()),format = 'latex')
+kable(group_by(h.transformed,race)%>%summarise(count.race = n()),format = 'html')
 ## as can be seen the majority interviewees are white, less than 10% are black and less than 2% are other races. 
 ## The 1990 census data shows that about 80% american population is white, 12% is black and the remaining is considered others. from this stand point. besides the white population is over represented in the sample survey and other races under-represented. From the race stand point, the sample is valid. However, because the observations of races other than white is too low, spliting the data by race is not a good idea. One should do either an analysis on white only or ignore the race factor.
 #ggplot(h.transformed)+aes(x = h.centered,y = log.earn,color = as.factor(sex))+geom_point()+geom_smooth(method='lm',se = F)
@@ -125,17 +127,62 @@ ggplot(h.transformed)+aes(x = ed,color = as.factor(sex))+geom_density( alpha = .
 ggplot(h.transformed)+aes(x = ed,y = log.earn,color = as.factor(sex))+geom_jitter()+geom_smooth(method='loess')
 
 ```
-One can observed from the histogram that height variable is unevenly distributed between genders. female has a mean roughly 3 inches below average while male roughly 4 inches above average with both genders have an approximated sample standard error at 2.5 inches. This fact approximately puts the mean of one gender out of 2 standard errors of the opposite gender. in this case, when we are predicting using height variable, we inevitably have to use gender to separate them. Also, because gender had seperated heights into two clusters, it is better to introduce interaction terms $height \times gender$ to ensure linear regression models the two genders differently on the 
-4. Interpret all model coefficients.
-
+One can observed from the histogram that height variable is unevenly distributed between genders. female has a mean roughly 3 inches below average while male roughly 4 inches above average with both genders have an approximated sample standard error at 2.5 inches. This fact approximately puts the mean of one gender out of 2 standard errors of the opposite gender. in this case, when we are predicting using height variable, we inevitably have to use gender to separate them. Also, because gender had seperated heights into two clusters, it is better to introduce interaction terms $height \times gender$ to ensure linear regression models the two genders differently. \newline
+The model's coefficient and it's residual plots was given below:\newline
 ```{r}
-
+MD1 = lm(data = h.transformed,log.earn ~ sex + h.centered + sex*h.centered)
+summary(MD1)$call
+summary(summary(MD1))
+summary(MD1)$coef
+summary(MD1)$r.squared
+summary(MD1)$call
+summary(MD1)
+plot(MD1,which=1:2)
+ggplot(h.transformed)+aes(x = h.centered,y = log.earn,color = as.factor(sex))+geom_jitter()+geom_smooth(method='lm',se = F)
+```
+From the plot shown, the residual show a tiny bias but stays really close to 0, but the variance is quite high and not equal across all the heights. From the QQ-plot we can see that the model works reasonably well for higher height values but have problems with lower height values.\newline
+From the age vs log.earn plot we can clearly see that there can be a nonlinear relationship between the two, for comparison we construct the model 2 as $y = gender + age + age^2 + gender * age + gender * age^2$. \newline
+```{r}
+## substract age with min(age) & add one colomn age^2
+h.transformed <- mutate(h.transformed,age = age-min(age))%>%mutate(agesq = age^2)
+MD2 = lm(data = h.transformed, log.earn ~ sex + age + agesq + sex*age + sex *agesq)
+summary(MD2)$coef[,1]
+md2coef <- summary(MD2)$coef[,1]
+summary(MD2)$r.squared
+plot(MD2,which = 1:2)
 ```
 
+
+4. Interpret all model coefficients.
+Both models discussed above shows although using different variables, but shows a similar results in residual analysis. Thus, for the purpose of this HW, model 2 using age & gender is selected to interpret here.\newline
+```{r}
+kable(t(md2coef),format = 'html',digits = ,align = 'c')
+kable(exp(t(md2coef)),format = 'html',digits = ,align = 'c')
+```
+The model can be written down as:
+$$log.earn = \beta_0 + \beta_1 \cdot gender + \beta_2 \cdot age + \beta_3 \cdot age^2 + \beta_4 \cdot gender \cdot age + \beta_5 \cdot gender \cdot age^2$$
+$$earn = exp(\beta0) \cdot exp(\beta_1)^{gender} \cdot exp(\beta_2)^{age} \cdot exp(\beta_3)^{age^2} \cdot exp(\beta_4)^{gender \cdot age} \cdot exp(\beta_5)^{gender \cdot age^2}$$
+The effect of the binary term $gender$ causes the regression function to be separated for male and female:\newline
+male will have the function as:
+$$earn = exp(\beta0) \cdot exp(\beta_2)^{age} \cdot exp(\beta_3)^{age^2}$$
+female will have: 
+$$earn =  exp(\beta0\cdot\beta_1) \cdot exp(\beta_2\cdot\beta_4)^{age} \cdot exp(\beta_3\beta_5)^{age^2}$$
+The interpretation follows as:
+\begin{itemize}
+  \item $exp(\beta_0) = 8605.78$ is the mean earning for minimun age 18 as male which 8605.78.
+  \item $exp(\beta_1) = 0.90$ means at same age, female with minimun age 18 earns 90% of male.
+  \item $exp(\beta_2) = 1.09$ means for male, 1 years older averagely result in 9% increase on earning.
+  \item $exp(\beta_3) = 0.998$ means for male, 1 unit larger in $age^2$ result in 0.2% decrese on earning.
+  \item $exp(\beta_4) = 0.96$ means for female, compare to male, can expect 4% less increase in earning for unit increase in age.
+  \item $exp(\beta_5) = 1.00$ means for female, compare to male, can expect the same 0.2% decrese on earning for unit increase in age^2
+\end{itemize}
 5. Construct 95% confidence interval for all model coefficients and discuss what they mean.
 
-```{r}
+```{r,echo=FALSE}
+kable(summary(MD2)$coef,format = 'html',digit = 2)
 
+MD2sum = as_tibble(summary(MD2)$coef)%>%select(1:2)%>%`colnames<-`(c('Est','StandardError'))%>%mutate(lower95CI = Est-2*StandardError)%>%mutate(upper95CI = Est+2*StandardError)%>%`rownames<-`(rownames(summary(MD2)$coef))
+kable(MD2sum,format = 'html',digits = 2,align = 'c')
 ```
 
 
@@ -172,90 +219,175 @@ pollution    <- read.dta (paste0(gelman_dir,"pollution/pollution.dta"))
 1. Create a scatterplot of mortality rate versus level of nitric oxides. Do you think linear regression will fit these data well? Fit the regression and evaluate a residual plot from the regression.
 
 ```{r}
-
+ggplot(pollution)+aes(x = nox,y = mort)+geom_point()+geom_smooth(method = 'lm',se=F)
+polMD1 = lm(data = pollution, mort ~ nox)
+plot(polMD1,which=1:2)
+summary(polMD1)
 ```
+Judging from the regression plot and the residual plot, the fit is really bad.\newline
 
 2. Find an appropriate transformation that will result in data more appropriate for linear regression. Fit a regression to the transformed data and evaluate the new residual plot.
-
+\newline
 ```{r}
+ggplot(pollution)+aes(x = nox)+geom_histogram(bins=30)
+ggplot(pollution)+aes(x = log(nox))+geom_histogram(bins=30)
+ggplot(pollution)+aes(x = mort)+geom_histogram(bins=30)
 
+ggplot(pollution)+aes(x=log(nox),y=mort)+geom_point()+geom_smooth(method='lm',se=F)
+polMD2 = lm(data = pollution, mort ~ log(nox))
+plot(polMD2,which=1:2)
+summary(polMD2)
 ```
+The new model fits better to the dataset than the previous one. The residual looks better, and the R-square had increased in a factor of 10.\newline
+
 
 3. Interpret the slope coefficient from the model you chose in 2.
 
 ```{r}
-
+summary(polMD2)
 ```
-
+The intercept 904.724 is the mean mortality rate per 100,000 for nox concentration of 1.\newline
 4. Construct 99% confidence interval for slope coefficient from the model you chose in 2 and interpret them.
 
 ```{r}
-
+kable(t(c(15.335-3*6.596,15.335+3*6.596)),col.names = c('99%CIlowerbound','99%CIupperbound'),align = 'c',format = 'html')
 ```
-
+if the same experiment can be done 100 times, one can expect 99 of the times the true slope value lies within the rage of $-4.453$ to $35.123$.\newline
 5. Now fit a model predicting mortality rate using levels of nitric oxides, sulfur dioxide, and hydrocarbons as inputs. Use appropriate transformations when
 helpful. Plot the fitted regression model and interpret the coefficients.
 
 ```{r}
+ggplot(pollution)+aes(x = so2)+geom_histogram(bins=30)
+ggplot(pollution)+aes(x = hc)+geom_histogram(bins=30)
+```
+both $SO^2$ and $HC$ is heavily right skewed, so we can try log transformation:
+
+```{r}
+ggplot(pollution)+aes(x = log(so2))+geom_histogram(bins=30)
+ggplot(pollution)+aes(x = log(hc))+geom_histogram(bins=30)
+```
+log transformation looks fine, thus we can use this to perform our prediction.
+```{r}
+polMD3 = lm(data = pollution, mort ~ log(nox) + log(so2) + log(hc))
+summary(polMD3)
+pollution1 = mutate(pollution,predt = predict(polMD3))
+ggplot(pollution1)+geom_point(mapping = aes(x = log(nox),y = mort,color = 'Observed Mortality'))+geom_point(mapping = aes(x = log(nox),y = predt,color='Predicted Value'))
 
 ```
-
+Under this model, intercept means the average mortality rate is 924.965 per 100,000 people with nox, so2 and hc all equals to 1.\newline
+coefficient for $\ln nox$ means that for each 1 unit increase in $\ln nox$ one can averagly expect 58.336 increase in mortality rate per 100,000 people\newline
+coefficient for $\ln so_2$ means that for each 1 unit increase in $\ln so_2$ one can averagly expect 11.762 increase in mortality rate per 100,000 people\newline
+coefficient for $\ln hc$ means that for each 1 unit increase in $\ln hc$ one can averagly expect 57.300 decrese in mortality rate per 100,000 people\newline
 6. Cross-validate: fit the model you chose above to the first half of the data and then predict for the second half. (You used all the data to construct the model in 4, so this is not really cross-validation, but it gives a sense of how the steps of cross-validation can be implemented.)
 
 ```{r}
+pol1 = sample_frac(pollution,0.5,replace = F)
+pol2 = setdiff(pollution,pol1)%>%select(nox,so2,hc,mort)
+
+polMD4 = lm(data = pol1, mort ~ log(nox) + log(so2) + log(hc))
+summary(polMD4)$r.squared
+pol2 = mutate(pol2, predt = predict(object = polMD4,newdata = pol2))%>%mutate(y = mort - mean(mort))%>%mutate(err = mort - predt)
+
+##R-squared on test set
+(1-((pol2$err%*%pol2$err)/(pol2$y%*%pol2$y)))[1]
 
 ```
 
 ### Study of teenage gambling in Britain
 
-```{r,message =FALSE}
-data(teengamb)
-?teengamb
+```{r,echo = FALSE}
+## remove 0 gambling observations
+teengamb1 = filter(teengamb,gamble>0)
+#hist(teengamb1$sex)
+#hist(log(teengamb1$status^2))
+#hist(log(teengamb1$income))
+#hist(teengamb1$verbal)
+#hist(log(teengamb1$gamble))
+
 ```
 
 1. Fit a linear regression model with gamble as the response and the other variables as predictors and interpret the coefficients. Make sure you rename and transform the variables to improve the interpretability of your regression model.
 
 ```{r}
-
+## construct log income and log gambling
+teengamb1 = mutate(teengamb1,log.in = log(income))%>%mutate(log.gamb = log(gamble))
+## choosing log.income and sex to build model
+teenMD = lm(data = teengamb1,log.gamb ~ sex + log.in + sex * log.in)
+teenMDcoef = exp(as.tibble(summary(teenMD)$coef)[,1])
+kable(t(teenMDcoef),format = 'html',digits = 3, align = 'c',col.names = c('Intercept','Gender','Log.in','Gen : Log.in'))
+kable(summary(teenMD)$coef,format = 'html', digits = 3, align = 'c')
+ggplot(teengamb1)+aes(x = log.in, y=log.gamb,color = as.factor(sex))+geom_point()+geom_smooth(method = 'lm',se=F)
 ```
-
+The intercept means the mean for male with 1 income per week, will gamble 2.091 per year in pounds\newline
+The coefficient for gender means the for female with 1 income per week is predicted to put 37.3% more on gambling per year\newline
+The coefficient for log.income means that for male, unit increase in log income per week will increase gambing per year by 254.5%\newline
+The coefficient for Gen:log.in means that for female, the increase in gambling per year will decrease by 81% compare to male\newline
 2. Create a 95% confidence interval for each of the estimated coefficients and discuss how you would interpret this uncertainty.
 
 ```{r}
-
+gambsum = as_tibble(summary(teenMD)$coef)%>%select(1:2)%>%`colnames<-`(c('Est','StandardError'))%>%mutate(lower95CI = Est-2*StandardError)%>%mutate(upper95CI = Est+2*StandardError)%>%`rownames<-`(rownames(summary(teenMD)$coef))
+kable(gambsum,format = 'html',digits = 2,align = 'c')
 ```
 
 3. Predict the amount that a male with average status, income and verbal score would gamble along with an appropriate 95% CI.  Repeat the prediction for a male with maximal values of status, income and verbal score.  Which CI is wider and why is this result expected?
 
 ```{r}
-
+teengamb1 = mutate(teengamb1,mean.status = status-mean(status))%>%mutate(mean.logincome = log.in - mean(log.in))%>%mutate(mean.verbal = verbal - mean(verbal))%>%mutate(max.status = status - max(status))%>%mutate(max.logincome = log.in - max(log.in))%>%mutate(max.verbal = verbal - max(verbal))
+teenMD2 = lm(data = teengamb1,log.gamb ~ mean.status + mean.logincome + mean.verbal)
+teenMD3 = lm(data = teengamb1,log.gamb ~ max.status + max.logincome + max.verbal)
+sum1 = t(as_tibble(summary(teenMD2)$coef[1,1:2]))
+##lower95CI for mean
+sum1[1]-2*sum1[2]
+##upper95CI for mean
+sum1[1]+2*sum1[2]
+sum2 = t(as_tibble(summary(teenMD3)$coef[1,1:2]))
+##lower95CI for mean
+sum2[1]-2*sum2[2]
+##upper95CI for mean
+sum2[1]+2*sum2[2]
 ```
-
+The maximal CI is wider, because locally there is fewer points than the mean ones, which results in bigger variance.
 ### School expenditure and test scores from USA in 1994-95
 
 ```{r}
-data(sat)
-?sat
+sat = sat
+
 ```
 
 1. Fit a model with total sat score as the outcome and expend, ratio and salary as predictors.  Make necessary transformation in order to improve the interpretability of the model.  Interpret each of the coefficient.
 
 ```{r}
+hist(sat$total)
+hist(log(sat$expend))
+hist(log(sat$ratio))
+hist(log(sat$salary))
 
+sat1 = mutate(sat,log.expend = log(expend))%>%mutate(log.ratio = log(ratio))%>%mutate(log.salary = log(salary))%>%mutate(meanlog.expend = log.expend-mean(log.expend))%>%mutate(meanlog.ratio = log.ratio-mean(log.ratio))%>%mutate(meanlog.salary = log.salary-mean(log.salary))%>%mutate(meantakers = takers-mean(takers))
+satMD1 = lm(data = sat1, total ~ meanlog.expend + meanlog.ratio + meanlog.salary)
+summary(satMD1)
+plot(satMD1,which = 1:2)
 ```
+intercept means average SAT score for average log.expend, average log.ratio and average log.salary\newline
+The coef of meanlog.expend for every unit increase in log expend, SAT scores would expect to increase 92.895.\newline
+The coef of meanlog.ratio means for every unit increase in log ratio, SAT scores would expect to increase 117.352\newline
+the coef of meanlog.salary means for every unit increse in log salary, SAT scores would expect to decrese 311.093\newline
 
-2. Construct 98% CI for each coefficient and discuss what you see.
+2. Construct 99% CI for each coefficient and discuss what you see.
 
 ```{r}
-
+satsum = as_tibble(summary(satMD1)$coef)%>%select(1:2)%>%`colnames<-`(c('Est','StandardError'))%>%mutate(lower95CI = Est-2*StandardError)%>%mutate(upper95CI = Est+2*StandardError)%>%`rownames<-`(rownames(summary(satMD1)$coef))
+kable(satsum,format = 'html',digits = 2,align = 'c')
 ```
-
+the takeaway is that, there might not be an actual correlation between SAT scores and the predictors\newline
 3. Now add takers to the model.  Compare the fitted model to the previous model and discuss which of the model seem to explain the outcome better?
 
 ```{r}
-
+satMD2 = lm(data = sat1, total ~ meanlog.expend + meanlog.ratio + meanlog.salary + meantakers)
+anova(satMD1,satMD2)
+summary(satMD1)
+summary(satMD2)
 ```
-
+clearly from the anova test, adding takers significantly improve the fit
 # Conceptual exercises.
 
 ### Special-purpose transformations:
@@ -265,13 +397,26 @@ For a study of congressional elections, you would like a measure of the relative
 Discuss the advantages and disadvantages of the following measures:
 
 * The simple difference, $D_i-R_i$
-
+  - advantages includes
+    - substraction provides quick classification from plus and minus sign.
+    - know the exact difference
+  - disadvantages includes
+    - zero and negative value can be a problem for future transformation.
+    - lose the knowledge of how close or how different the two party is(eg: 5500$ difference with each raised over 1mil vs. 500$ difference with each raised 5000ish)
 * The ratio, $D_i/R_i$
+  - advantages includes
+    - quick classification comparing to '1'
+    - always greater than zero, easy to transform
+  - disadvantages includes
+    - lose the exact amount of difference in raised money
+    - when $R_i$ isa small, increases rapidly, not evenly distributed.
 
 * The difference on the logarithmic scale, $log D_i-log R_i$ 
-
+  - is esentailly taking log on $D_i/R_i$
+  - resolve some distribution issue, but still lose the exact amount difference info.
 * The relative proportion, $D_i/(D_i+R_i)$.
-
+  - well organized, scale from 0 to 1.
+  - but lose info on actual amount
 
 ### Transformation 
 
@@ -279,15 +424,31 @@ For observed pair of $\mathrm{x}$ and $\mathrm{y}$, we fit a simple regression m
 $$\mathrm{y}=\alpha + \beta \mathrm{x} + \mathrm{\epsilon}$$ 
 which results in estimates $\hat{\alpha}=1$, $\hat{\beta}=0.9$, $SE(\hat{\beta})=0.03$, $\hat{\sigma}=2$ and $r=0.3$.
 
-1. Suppose that the explanatory variable values in a regression are transformed according to the $\mathrm{x}^{\star}=\mathrm{x}-10$ and that $\mathrm{y}$ is regressed on $\mathrm{x}^{\star}$.  Without redoing the regression calculation in detail, find $\hat{\alpha}^{\star}$, $\hat{\beta}^{\star}$, $\hat{\sigma}^{\star}$, and $r^{\star}$.  What happens to these quantities when $\mathrm{x}^{\star}=10\mathrm{x}$ ? When $\mathrm{x}^{\star}=10(\mathrm{x}-1)$?
-
-
+1. Suppose that the explanatory variable values in a regression are transformed according to the $\mathrm{x}^{\star}=\mathrm{x}-10$ and that $\mathrm{y}$ is regressed on $\mathrm{x}^{\star}$.  Without redoing the regression calculation in detail, find $\hat{\alpha}^{\star}$, $\hat{\beta}^{\star}$, $\hat{\sigma}^{\star}$, and $r^{\star}$.  What happens to these quantities when $\mathrm{x}^{\star}=10\mathrm{x}$ ? When $\mathrm{x}^{\star}=10(\mathrm{x}-1)$?\newline
+When $\mathrm{x}^{\star}=\mathrm{x}-10$
+$$\alpha^{\star} = \alpha - 10 \cdot \beta$$
+$$\beta^{\star} = \beta$$
+$$\sigma^{\star} = \sigma$$
+When $\mathrm{x}^{\star}=10\mathrm{x}$
+$$\alpha^{\star} = \alpha$$
+$$\beta^{\star} = \beta/10$$
+$$\sigma^{\star} = \sigma$$
+When $\mathrm{x}^{\star}=10(\mathrm{x}-1)$
+$$\alpha^{\star} = \alpha-\beta$$
+$$\beta^{\star} = \beta/10$$
+$$\sigma^{\star} = \sigma$$
 2. Now suppose that the response variable scores are transformed according to the formula
-$\mathrm{y}^{\star\star}= \mathrm{y}+10$ and that $\mathrm{y}^{\star\star}$ is regressed on $\mathrm{x}$.  Without redoing the regression calculation in detail, find $\hat{\alpha}^{\star\star}$, $\hat{\beta}^{\star\star}$, $\hat{\sigma}^{\star\star}$, and $r^{\star\star}$.  What happens to these quantities when $\mathrm{y}^{\star\star}=5\mathrm{y}$ ? When $\mathrm{y}^{\star\star}=5(\mathrm{y}+2)$?
+$\mathrm{y}^{\star\star}= \mathrm{y}+10$ and that $\mathrm{y}^{\star\star}$ is regressed on $\mathrm{x}$.  Without redoing the regression calculation in detail, find $\hat{\alpha}^{\star\star}$, $\hat{\beta}^{\star\star}$, $\hat{\sigma}^{\star\star}$, and $r^{\star\star}$.  What happens to these quantities when $\mathrm{y}^{\star\star}=5\mathrm{y}$ ? When $\mathrm{y}^{\star\star}=5(\mathrm{y}+2)$?\newline
+When $\mathrm{y}^{\star\star}=a(\mathrm{y}+b) , a\neq0$
+$$\alpha^{\star\star} = a(\alpha+b)$$
+$$\beta^{\star\star} = a\cdot\beta$$
+$$\sigma^{\star\star} = \sqrt{a}\cdot\sigma$$
 
 
 3. In general, how are the results of a simple regression analysis affected by linear transformations of $\mathrm{y}$ and $\mathrm{x}$?
-
+rules:\newline
+multiplication on $x$ equals to divide the $\beta$ term, substraction of $x$ equals to add substraction $\times \beta$ to the intercept\newline
+multiplication on $y$ equals to multiplication on all coeficients, substraction on $y$ equals to substract on intercept
 
 
 4. Suppose that the explanatory variable values in a regression are transformed according to the $\mathrm{x}^{\star}=10(\mathrm{x}-1)$ and that $\mathrm{y}$ is regressed on $\mathrm{x}^{\star}$.  Without redoing the regression calculation in detail, find $SE(\hat{\beta}^{\star})$ and $t^{\star}_0= \hat{\beta}^{\star}/SE(\hat{\beta}^{\star})$.
@@ -305,4 +466,6 @@ $\mathrm{y}^{\star\star}=5(\mathrm{y}+2)$ and that $\mathrm{y}^{\star\star}$ is 
 # Feedback comments etc.
 
 If you have any comments about the homework, or the class, please write your feedback here.  We love to hear your opinions.
+
+modeling took too much time to finish, and they are not really different from one another, conceptual questions are much more fun
 

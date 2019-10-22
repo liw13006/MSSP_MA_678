@@ -1,0 +1,545 @@
+---
+title: "MA678 Discussion"
+date: "Oct 16, 2019"
+output: learnr::tutorial
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+pacman::p_load(learnr,"knitr","DiagrammeR","foreign","MatchIt","optmatch","Zelig","WhatIf","ggplot2","sem")
+```
+
+# Causal Inference
+## 1. Introduction
+### 1.1 Introduction and Fundamentals 
+You must have heard that "correlation does not imply causation".    
+
+For example, consider the following cases:    
+- Did customers buy into a product because of an email campaign or would they have converted regardless of whether we did or did not run the campaign?    
+- Was there any effect of promotion on the spending behavior of customers?    
+- Did people with disease got better because they took treatment or would they have gotten better anyway?    
+
+### 1.2 Fundamental of Causal Inference Problems 
+We take a medical experiment as the example. We begin by consiering the problem of estimating the treatment effect compared to a control group. With a binary treatment T taking on the value 0 (control) or 1 (treatment), we define **potential outcomes**, $y_i^0$ and $y_i^1$ for unit $i$ as the outcomes that would be observed under control and treatment conditions.     
+
+#### 1.2.1 The problem
+**Counterfactual outcome**:        
+For someone assigned to the treatment condition $T_i = 1$, $y_i^1$ is observed and $y_i^0$ is unobserved *counterfactual* outcome, which represents what would have happened to the individual if assigned to control. Conversely, for control units, $y_i^0$ is observed and $y_i^1$ is counterfactual.
+
+**Treatment effect**:    
+For unit i, treatment effect is $$y_i^1 - y_i^0$$
+
+**The fundamental problem**:        
+**At most** one of these two potential outcomes, $y_i^0$ and $y_i^1$, can be observed for each unit i. But to evaluate treatment effect, we need both potential outcomes. $y_i^0$ values are "missing" for units in treatment groups and $y_i^0$ values are "missing" for units in contorl group.
+
+#### 1.2.2 Ways to deal with the problem
+**Close substitutes**:    
+This method comes with strong assumptions. It tries to measure both $y_i^0$ and $y_i^1$ on the same unit.     
+For example, dividing a piece of plastic into two parts and then exposing each of them to a corrosive chemical. In this case, we assume that pieces are identical in how they would respond with and without treatment, $y_1^0 = y_2^0$ and $y_1^1 = y_2^1$. 
+
+**Randomization and experiementation**:    
+Since we cannot compare treatment and control outcomes for the same units, we try to compare them on similar units. Similarity can be attained by **randomization**, which we will discuss later. 
+
+**Statistical adjustment**:
+In some cases, randomization can be impractical or unethical. However, in observational studies, units often end up treated or not based on characteristics that are predictive of the outcome of interest. When similarity between groups is not attained, modeling or other forms of adjustment can be used to fill in the gap. 
+
+### 1.3 Randomization
+Begin with the cleanest scenario, an experiment with units randomly assigned to receive treatment and control, and with the units in the study considered as a random sample from a population of interest. 
+
+When treatments are assigned completely at random, we can think of the different treatment groups as a set of random samples from a common population. The average treatment effect of the population is estimated by
+$$avg(y^1) - avg(y^0)$$
+```{r}
+class <- read.table(url("http://www.stat.columbia.edu/~gelman/arm/examples/electric.company/electric.dat"), header = T)
+head(class)
+colnames(class)[1] <- "treatment"
+```
+
+```{r}
+mean(class$treated.Posttest) - mean(class$control.Posttest)
+```
+
+Equivalently, the average causal effect of the treatment corresponds to the coefficient $\theta$ in the regression, $y_i = \alpha + \theta T_i +error_i$.
+```{r}
+for (k in 1:4){
+  subset = class[class$Grade==k,]
+  print(lm(treated.Posttest ~ treatment, data = subset))
+  }
+```
+It's not hard to observe that the treatment appears to be more effective in the low grades. 
+
+### 1.4 Observational studies
+In practice, we often work with observational data, where treatments are observed rather than assigned and it's not at all reasonable to consider the observed data under different treatments as random samples from a common population.     
+In an observational study, there can be systematic diﬀerences between groups of units that receive diﬀerent treatments—diﬀerences that are outside the control of the experimenter—and they can aﬀect the outcome.
+
+```{r}
+for (k in 1:4){
+  ok <- class[(class$Grade == k) & (!is.na(class$Supplement.)),]
+  print(lm(treated.Posttest ~ Supplement. + treated.Pretest, data = ok))
+}
+```
+From the regressions, the uncertainties are high enough that the comparison is inconclusive except in grade 2, but the general pattern is consistent with the reasonable hypothesis that supplementing is more effective in lower grades.
+
+### 1.5 Confounding 
+Consider a situation in randomized trail, the random assignment of treatment means that there should, on average, be no significant differences between the treated and untreated groups. Therefore, any difference in mortality that we observe between groups must be due to the treatment itself.     
+However, in observational study, there may exist differences between the treated group and the untreated group, other than the treatment itself. So, something other than treatment that differs, then we cannot conclusively say that any difference observed is due to the treatment. Such a difference could also plausibly be due to other variables that differ between groups.     
+These variables that differ between treatment groups and control groups are called **confounders** if they also influence the outcome. 
+
+We can represent confounders in graph: for example, X is gender, T is treatment, Y is mortality.     
+
+```{r}
+library(DiagrammeR)
+graph_ex <- create_graph() %>%
+  add_node(label = "X") %>% 
+  add_node(label = "T") %>% 
+  add_edge(from = 1, to = 2) %>% 
+  add_node(label = "Y") %>% 
+  add_edge(from = 2, to = 3) %>% 
+  add_edge(from = 1, to = 3)
+```
+But if gender differed between the treatment group and untreated group, and it has no association with the outcome, then gender would not be considered a confounder. 
+
+**Identifiable estimator**:
+The goal is to measure the population average causal effect:
+$$\delta = E[Y^1] - E[Y^0]$$
+Typically, the way we would estimate this quantity is using the conditional sample averages:
+$$\hat \delta = \hat E[Y | T = 1] - \hat E[Y | T = 0]$$
+with $E[Y^1]$ the expected outcome in the *hypothetical situation* where everyone was assigned to treatment, $E[Y|T=1]$ the expected outcome for all individuals in the population who are *actually assigned* to the treatment.     
+
+However, this $\hat \delta$ is only an unbiased estimator of the true average causal effect, when the *identifiability conditions* hold:     
+
+1. *Exchangability*: The treated and untreated individuals are exchangeable wherein the assignment of treatment does not depend on the potential outcomes.
+$$Y^1, Y^0 \perp T$$    
+2. *Positivity*: The probability of receiving every level of treatment is positive for every individual.    
+3. *Consistency*: The treatment is defined unambiguously, i.e. that the potential outcome that corresponds to the treatment that the individual actually received is “factual”. If an individual j, recerived treatment $t$ by means $k$, then consistency means that:
+$$Y_j = Y_j(t,k)\: if\: t=T_j\: no\:matter\:the\:value\:of\:k$$
+    
+Basically, if there are confounders present, then the first condition will be violated. In particular, the expected outcome for the individuals that were actually treated, $E[Y|T=1]$ may not be equal to the potential outcome under treatment for the entire population. 
+
+**Measured counfounder**:
+In the situation where all confounders are measured, there do exist methods for adjusting the estimates so that we can acually estimate a causal effect.     
+We can assume *conditional exchangeability* to proceed the estimation.    
+    
+The most common methods for adjusting the estimator to eliminate the confounding:
+
+1. Matching, restriction, and stratification (regression)     
+
+2. Standardization, inverse-probability weighting, and G-estimation
+
+**Unmeasured confounder**:
+If there exist unmeasured confounders that may be a common cause of both the outcome and the treatment, then *it's impossible to accurately estimate the causal effect*. 
+
+### 1.6 Missing Data
+One core problem associated with causal inference is missing data. It can be that some outcomes $Y_i$ is not observed or due to dropout (a unit is no longer on observation at the time the outcome should be measured).     
+
+**Censoring**:
+We call a missing outcome a *censored* observation.     
+1. Left-censoring: the event of interest has already occurred before enrollment, and this is rarely encountered.
+
+2. Right-censoring: a subject leaves the study before an event occurs or the study ends before the event has occurred. 
+
+**Types of missing data**:
+
+1. Missing completely at random (MCAR): missingness doesn’t depend on outcomes
+$$C_i \perp Y_i$$     
+
+2. Missing at random (MAR): missingness may depend on observed $X$ but no further on outcome
+$$C_i \perp Y_i | X_i$$    
+
+3. Missing not at random (MNAR): missingness depends on the outcome. Typically we believe that data is MNAR if there are unmeasured factors, which affect both $C_i$ and $Y_i$.     
+
+
+
+## 2. Regression with IV
+### 2.1 Why we need to use IV?
+There are situations when the ignorability assumption seems inadequate because the dataset does not appear to capture all inputs that predict both the treatment and the outcomes. In this case, controlling for observed confounding covariates through regression, subclassiﬁcation, or matching will not be suﬃcient for calculating valid causal estimates because unobserved variables could be driving diﬀerences in outcomes across groups.    
+When ignorability is in doubt, the method of instrumental variables (IV) can sometimes help. IV relies on several key assumtipns: *Ignorability of the instrument*, *Non zero association* between instrument and treatment variable, *Monotonicity* and *Exclusion restriction*. (for more details, please check the links in reference)    
+ 
+### 2.2 Instrumental variables
+IV are a "natural experiment" that are randomly assigned to each individual and influences the outcome only through the treatment.    
+IV splits the variation in treatment variable into an *exogenous* (uncorrelated with errors) and an *endogenous* (corrlated with error) part. 
+
+### 2.3 Two-stage least squares
+```{r}
+library(foreign)
+sesame <- read.dta("sesame.dta")
+
+fit.2a <- lm (viewcat ~ encour, data = sesame)
+viewcat.hat <- fit.2a$fitted 
+fit.2b <- lm (postlet ~ viewcat.hat, data = sesame)
+print(fit.2a)
+print(fit.2b)
+```
+In this example, the coeﬃcient on viewcat.hat is the estimate of the causal eﬀect of watching Sesame Street on letter recognition for those induced to watch by the experiment.This second-stage regression does not give the correct standard error, however.
+
+### 2.4 Standard errors for IV estimates 
+To adjust the standard error to account for the uncertainty in both stages of the model, we then regress the outcome on predicted compliance and covariance, this time saving the predictor matrix from this second-stage regression.
+```{r}
+fit.3b <- lm (postlet ~ viewcat.hat+prelet+as.factor(site)+setting, x=TRUE, data = sesame)
+print(fit.3b)
+```
+We then compute the standard deviation of the adjusted residual but with the column of predicted treatment values replaced by observed treatment values.
+
+The final step is to compute the adjusted standard error for the two-stage regression estimate by taking the standar error from *fit.3b* and scaling by the adjusted residual standard deviation, dibided by the residual standard deviation from *fit.3b* itself.  
+
+### 2.5 Automate the previous steps
+A package available in R called *sem* that has a function, *tsls()*, that automates this process, including calculating appropriate standard errors. 
+```{r}
+library(sem)
+iv1 <- tsls (postlet ~ regular, ~ encour, data=sesame) 
+print (iv1)
+```
+
+
+
+## 3. Propensity Score
+
+### 3.1 Problems & Solutions
+#### 3.1.1 Porblems: Regression Bias
+In observational studies, we know that $\bar Y_{1} - \bar Y_{0}$ is generally neither unbiased nor consistent for the ATE due to the presence of confounders X.
+
+But
+$$ E(Y | Z=z, X) = E(Y(z) | X) $$
+where $Z_{i}$: treatment assignment
+
+This suggests modeling the conditional expectation function for the observed data and using our estimate of this to estimate the
+ATE.
+
+Unlike the case of the completely randomized experiment, however, we saw that if the regression function was not specified correctly, the estimate of the ATE was biased, unless it just so happened that $\bar X_{1} = \bar X_{0}$. In observational studies, the difference in means in the treatment and control groups can be substantial.
+
+#### 3.1.2 Problems: Imbalance & Incomplete Overlap
+Imbalance occurs if the distributions of relevant pre-treatment variables differ for the treatment and control groups. When treatment and control groups are unbalanced, the simple comparison of group averages, $y_{i} - y_{0}$, is not, in general, a good estimate of the average treatment effect. Instead, some analysis must be performed to adjust for pre-treatment differences between the groups.
+
+Lack of complete overlap occurs if there are regions in the space of relevant pre-treatment variables where there are treated units but no controls, or controls but no treated units. When treatment and control groups do not completely overlap, the data are inherently limited in what they can tell us about treatment effects in the regions of nonoverlap. No amount of adjustment can create direct treatment/control comparisons, and one must either restrict inferences to the region of overlap, or rely on a model to extrapolate outside this region.
+
+
+#### 3.1.3 Solutions: 
+
+##### First Solution:
+One might attempt to model the regression function nonlinearly. However, the researcher often does not have enough knowledge to specify a functional form. This could lead to a non-parametric model.
+
+##### Second Solution:
+One might attempt to make the covariate distributions the same in the treatment and control group like a completely randomized study. A traditional way to achieve such
+"balance" is by matching. For each unit in the treatment group, we find an observation in the control group with the same covariate values X. The difference in the outcomes between the two units would then be unbiased for the ATE(X).
+
+##### Comments:
+Both approaches may become unwieldy when there are many covariates ---- the so-called curse of dimensionality. In the past 30 years, great
+advances have been made in computing that have allowed significant progress to be made in both directions.
+
+But first, it is useful to start with the propensity score that comes from the seminal article of Rosenbaum and Rubin (1983).
+
+
+### 3.2 Definition & Properties
+
+#### 3.2.1 Formal Definition:
+The propensity score for the ith individual is defined as the probability that he or she receives the treatment given everything we observe before the treatment (that is, all the confounding covariates X for which we want to control).
+$$ e(X) = Pr(Z=1|X) $$
+
+#### 3.2.2 Properties:
+Rosenbaum and Rubin showed that if treatment assignment is strongly ignorable, given covariate X, that is, 
+
+1. treatment assignment is unconfounded, given covariates: 
+$$Y(0),Y(1) \perp Z | X$$
+and
+
+2. 0<e(X)<1
+
+Then treatment assignment is strongly ignorable given e(X).
+
+They also showed that the distribution of the confounding covariates is the same in the treatment group and the control group for subjects with the same propensity score: $$X \perp Z | e(X)$$
+
+#### 3.2.3 Pratice: Balance given Propensity Score
+The scores, e(X) divide the covariate space into components with equal probability of receiving treatment. Any division that is finer will also “balance” the covariates, while any division that is coarser will not.
+
+As is evident from these arguments, but sometimes forgotten, the propensity score is a balancing score whether or not treatment assignment is unconfounded.
+
+However, using the propensity score to create groups that are balanced on X does not imply potentially important confounders that the investigator has failed to include in X are balanced across the treatment and control groups.
+
+
+
+### 3.3 Estimation with Propensity Score
+#### 3.3.1 Regression
+Assuming unconfoundedness, linear regression leads to biased and inconsistent estimates of ATE if not correctly specified.
+
+While it may be difficult to estimate high-dimensional regression non-parametrically, it is sufficient to regress the outcomes on the propensity score and treatment assignment, then average over the distribution of the propensity score. If regression model is correctly specified, this yields consistent estimate of ATE.
+
+In practice propensity score is unknown. Therefore, this strategy requires estimation and specification of two models: one for the outcome, one for the propensity score. Usually propensity scores can be estimated using standard models such as logistic regression, where the outcome is the treatment indicator and the predictors are all the confounding covariates. 
+
+
+#### 3.3.2 Sub-Classification
+##### Poststratify: effects and estimates for different subpopulations
+
+##### Propensity Score Sub-classification: 
+In a randomized block experiment, the function S(X) mapping the covariates into strata is a balancing score.
+
+We know that a natural way to estimate the ATE from a randomized block experiment is to first estimate ATE’s using the stratum proportions as weights. In observational study, we can use the propensity score to form strata and proceeding as in the randomized block experiment.
+
+Rosenbaum and Rubin refer to this approach as sub-classification. They also show that for two units with the same value of the propensity score, e(X), one treated and one not, the difference in outcomes is unbiased for ATE(e(X)).
+
+##### Step 1: Calculation: 
+Sub-classification forms blocks s based on the covariate values, and then the data are analyzed as in a block randomized experiment. Within each block s, there are 
+$$n_{s} = n_{0s} + n_{1s}$$
+where $n_{0s}$ is the number of control units and $n_{1s}$ is the number of treated units.
+
+Let $\bar Y_{1s}$ denote the average value of the outcome for the treated
+units in stratum s, and let $\bar Y_{1s} - \bar Y_{0s}$ denote the estimate of the
+ATE for that stratum. The ATE is estimated as:
+$$\hat {ATE} = \sum^{S}_{s=1} \frac{n_{s}}{n} (\bar Y_{1s} - \bar Y_{0s})$$
+
+Replacing $\frac {n_{s}}{n}$ with the within stratum treated proportions $\frac {n_{1s}}{n_{1}}$ yields an estimate of the ATT.
+
+
+##### Step 2: Estimation of Propensity Score: 
+Suppose one starts by estimating the propensity score model using logistic regression or a probit model. (see Imbens and Rubin 2015 for more details) In practice, one may want to include not only main e↵ects of covariates, but a number of interactions as well.
+
+Other methods may also be used to estimate the propensity score model, e.g., generalized boosted models (McCallrey et al. 2004) and Bayesian Additive Tree Method.
+
+
+##### Step 3: Split Observations 
+After model has been fitted, a pre-specified number of subclasses is formed using propensity score intervals of equal length and in each interval, a test is conducted to assess whether or not the mean propensity score is different in the treatment and control groups.
+
+In those intervals where the null hypothesis of no difference is rejected, the interval is split until the null is not rejected or until further splitting would result in the situation where an interval fails to contain both treatment and control observations.
+
+
+##### Step 4: Check Balance 
+After the number and spacing of intervals has been determined, using the fact that the propensity score is a balancing score, the covariate distributions should be balanced across the treatment and control groups in each sub-class.
+
+To check this, Imbens and Rubin (2015) recommend using the
+“normalized” difference. There are also other ways to check, and we will not go deep here. 
+
+
+##### Step 5: Regression
+Recall that in a completely randomized experiment, we saw that using linear regression to adjust for differences between the treatment and control groups resulted in an unbiased estimator of the ATE with smaller variance than the estimator $\bar Y_{1s} - \bar Y_{0s}$.
+
+Since the randomized block experiment is a randomized experiment within blocks and sub-classification is an attempt to mimic a block randomized experiment, this suggests using linear regression within blocks to adjust for differences in balance between covariates in the treatment and control groups.
+
+
+#### 3.3.3 Weighting
+The idea of weighting observations in a survey sample is based on the idea that the sample surveyed is not quite representative of the broader population. The goal is to make the sample look more like the population. To do so, you can add a larger weight to the individuals who are underrepresented in the sample and a lower weight to those who are over-represented.    
+Consider a example that young males are more likely to enter treatment group and aged males are more likely to enter control group. In this case, it would make sense that comparing the outcome of these few young males in the control group with the outcome of the many young males in the treatment group serves as a fairly good estimate of the causal effect for the subgroup of young males. So we could up-weight the young males who were placed in the control group and down-weight the young males who, as expected, were placed in the treatment group.    
+    
+**Inverse probability weighting**:
+Inverse probability weighting literally refers to weighting the outcome measures by the inverse of the probability of the individual with a given set of covariates being assigned to their treatment.    
+$$With\:propensity\:score:\: p(x)=P(T=1|X=x)$$
+For treated individuals, the weight is:    
+$$w(x)=\frac{1}{p(x)}$$
+For control individuals, the weight is:    
+$$w(x) = \frac{1}{(1-p(x))}$$
+
+**Standardized IP-weighting**:
+If propensity score is close to 0, the weights we've proposed previously will end up very large. A common alternative to it is stabilized weights, which use the marginal probability of treatment instead of 1 in the numerator.    
+For treated individuals, the stabilized weight:
+$$w(x)=\frac{P(T=1)}{p(x)}$$
+For control individuals, the stabilized weight:
+$$w(x)=\frac{1-P(T=1)}{1-p(x)}$$
+
+We can weight the treated observations by the propensity score and the untreated observations by the probability of not receiving treatment.
+
+It is also proved that weighting using the propensity score creates distributions in the treatment group and the control group that are the same, and also that weighting is theoretically superior to sub-classification, as the latter generally leads to a biased estimate of the ATE.
+
+
+
+## 4. Matching
+
+### 4.1 Solutions to Observational Study
+**Sub-Classification**
+make observational study mimic randomized block experiment
+
+**Weighting**
+a refined version of sub-classification
+
+**Matching**
+In its most basic form, so-called one-to-one matching, where each treated unit is matched to a control unit, matching mimics the paired randomized experiment.
+
+One caveat, when matching is used for causal inference, it is imperative that it be performed without looking at the outcome values. Otherwise, a researcher might pick the match that he or she likes best if there are many good control matches are available. Then, the ones most consistent with the researchers preferred findings are chosen and that biases the findings obviously. So. It's important that you perform the matching without looking at the outcomes.
+
+### 4.2 Several Types of Matching
+
+#### 4.2.1 One-to-one Matching
+In the majority of the literature on matching for causal inference, one finds matches for the treated observations and uses those matches to get controls, and one is estimating the effective treatment on the treated. In observational studies, typically, the majority of units are untreated and there are relatively more controls available for matching.
+
+It's very important to note that the same approach can be used to find matches for control observations in the treatment group and estimate the average effect of treatment on the untreated (ATU). As we know, ATE is a weighted ATT and ATU, so matching can be used to estimate the average treatment effect as well. 
+
+
+#### 4.2.1 One-to-many Matching
+Suppose for the moment, it is possible to exactly match each of the n1 treated units to $M_{i} \ge 1$ on treated observations. By which we mean that the treated and untreated observations that are matched have identical values on all confounders. 
+
+In the $i^{th}$ matched pair, we'll let $Y_{i1}$ denote the outcome for the treated observation, and we'll let $\bar Y_{i2}$ be the average of the $M_{i}$ untreated matches.
+
+$Y_{i1} - \bar Y_{i2}$ is an estimate of the unit effect for the particular confounders values $X_{i1} =X_{i2} $ for all $M_{i}$. Then, averaging over all the n1 pairs and that gives an estimate of the ATT.
+
+
+#### 4.2.3 Matching by Covariate Distance
+In general, however, exact matching is much too stringent. When there are many confounders, few exact matches will be obtained. The majority of the data would then have to be thrown away.
+
+Often in practice, researchers use approximate matching methods when the observations for which matches are to be found do not have counterparts in the control group with the same values on all confounders. A natural way is to define a distance and to match treated units to the closest available control unit. 
+
+For now, let's assume that all confounders are continuous. In this case, the Euclidean distance is an obvious choice, but generally the Mahalanobis distance, which takes into consideration the fact that confounders do not in general share the same units of measurement, should be preferred. 
+
+
+#### 4.2.4 Propensity Score Matching
+Rosenbaum and Rubin (1983) showed that the difference between the treated observation and an untreated observation with the same propensity score is unbiased for the ATE(e(X)).
+
+Thus, matching each treated observation to an untreated observation with the same propensity score, and then averaging the differences over all the pairs, results in an unbiased estimator of the ATT.
+
+Advantage: it may be easier to find good matches on their propensity score, which reduces the confounders to one dimension than on the multidimensional set of confounders. 
+
+In practice, however, we don't know the propensity score, so we have to estimate it. 
+
+Also, even though the propensity score is a one-dimensional summary of a covariates, exact matching on the estimated score is also too stringent in practice. So, we need to use some distance metrics on the propensity score. 
+
+The first one is just the difference between the propensity score is the absolute value. 
+$$|\hat e(x) - \hat e(x^{'})| $$
+The second one is just the difference between the logits.
+$$|\hat l(x) - \hat l(x^{'})| $$ 
+where $\hat l(x)$ is the estimated logit of $e(x)$.
+
+
+
+## 5. Examples in R
+
+### 5.1 Data: lalonde
+
+This data set is a subset of the job training program analyzed in Lalonde (1986) and Dehejia and Wahba (1999). 
+
+#### Variables:
+`treat`: participation in the job training program, 1 if participated in the program, and 0 otherwise.
+
+`age`: participants' age
+
+`educ`: years of education
+
+`race`: 1 if black, and 0 othewise
+
+`hispan`: 1 if hispanic, and 0 otherwise
+
+`married`: 1 if married, 0 otherwise
+
+`nodegree`: 1 if no degree, 0 otherwise
+
+`re74`: 1974 real earnings
+
+`re75`: 1975 real earnings
+
+`re78`: 1978 real earnings
+
+```{r}
+data("lalonde")
+summary(lalonde)
+```
+
+### 5.2 Matching
+#### 5.2.1 Exact Matching
+The simplest version of matching is exact. This technique matches each treated unit to all possible control units with exactly the same values on all the covariates, forming subclasses
+such that within each subclass all units (treatment and control) have the same covariate values.
+
+Exact matching is implemented in *MatchIt* using method = "exact". Exact matching will be done on all covariates included on the right-hand side of the formula specified in the MatchIt call.
+```{r}
+m.out <- matchit(treat ~ educ + black + hispan, data = lalonde,method = "exact")
+m.out
+```
+
+
+#### 5.2.2 Sub-classification
+When there are many covariates, finding sufficient exact matches will often be impossible. The goal of subclassification is to form subclasses, such that in each the distribution (rather than the exact values) of covariates for the treated and control groups are as similar as possible. 
+
+Various subclassification schemes exist, including the one based on a scalar distance measure such as the propensity score estimated using the distance option. Subclassification is implemented in *MatchIt* using method = "subclass".
+
+```{r}
+m.out <- matchit(treat ~ re74 + re75 + educ + black + hispan + age, data = lalonde, method = "subclass")
+m.out
+```
+
+
+#### 5.2.3 Optimal Matching
+The default nearest neighbor matching method in MatchIt is “greedy” matching, where the closest control match for each treated unit is chosen one at a time, without trying to minimize
+a global distance measure. In contrast, “optimal”matching finds the matched samples with the smallest average absolute distance across all the matched pairs.
+
+Optimal matching is performed by setting method = "optimal", which automatically loads an add-on package called optmatch (Hansen 2004). We conduct 2:1 optimal ratio matching based on the propensity score from the logistic regression.
+```{r}
+m.out <- matchit(treat ~ re74 + re75 + age + educ, data = lalonde, method = "optimal", ratio = 2)
+m.out
+```
+
+
+### 5.3 Checking Balance
+#### 5.3.1 Numerical Summaries
+```{r}
+summary(m.out)
+```
+
+#### 5.3.2 Graphical Summaries
+We can also examine the balance graphically using the plot() command, which provides three types of plots: jitter plots of the distance measure, Q-Q plots of each covariate, and histograms of the distance measure. For subclassification, separate Q-Q plots can be printed for each subclass. 
+
+##### ggplot
+```{r}
+ggplot(lalonde)+
+  geom_density(mapping = aes(x=age,fill=as.factor(treat)),alpha=.5)+
+  theme_classic()
+```
+
+
+##### Jitter plot
+```{r,warning=FALSE}
+plot(m.out,type = "jitter")
+```
+The jitter plot for subclassification is the same as that for other types of matching, with the addition of vertical lines indicating the subclass cut-points.
+
+The size of each point is proportional to the weight given to that unit. Observation names can be interactively identified by clicking
+the first mouse button near the units.
+
+
+```{r,warning=FALSE}
+plot(m.out,subclass = 1,which.xs = c("age","re74","educ"))
+```
+
+If the empirical distributions are the same in the treated and control groups, the points in the Q-Q plots would all lie on the 45 degree line (lower left panel of Figure 1). Deviations from the 45 degree line indicate differences in the empirical distribution.
+
+
+```{r}
+plot(m.out,type = "hist")
+```
+
+With the histogram option, 4 histograms are provided: the original treated and control groups and the matched treated and control groups. For the Q-Q plots and the histograms, the weights that
+result after matching are used to create the plots.
+
+
+
+### 5.4 Analysis After Matching
+
+#### 5.4.1 Model-based estimates
+We conduct a standard parametric analysis and compute quantities of interest in the most common way. We begin with nearest neighbor matching with a logistic regression-based propensity score.
+```{r}
+#m.out0 <- matchit(treat ~ age + educ + black + hispan + nodegree + married + re74 + re75, method = "nearest", data = lalonde)
+m.out0 <- matchit(treat ~ age + educ + black + hispan + nodegree + married + re74 + re75, method = "nearest", discard = "hull.control", data = lalonde)
+summary(m.out0)
+```
+
+
+Then we check balance using the summary and plot procedures. When the best balance is achieved, we run the parametric analysis (two variables are dropped because they are exactly matched):
+```{r}
+z.out0 <- zelig(re78 ~ treat + age + educ + black + nodegree + re74 + re75, data = match.data(m.out0), model = "ls")
+summary(z.out0)
+```
+
+and then set the explanatory variables at their means (the default) and change the
+treatment variable from a 0 to a 1:
+```{r}
+x.out0 <- setx(z.out0, treat = 0)
+x1.out0 <- setx(z.out0, treat = 1)
+```
+
+and finally compute the result and examine a summary:
+```{r}
+s.out0 <- sim(z.out0, x = x.out0, x1 = x1.out0)
+summary(s.out0)
+```
+
+
+
+## Reference
+http://www.rebeccabarter.com/blog/2017-07-05-confounding/
+http://www.stat.columbia.edu/~gelman/arm/chap9.pdf
+http://www.stat.columbia.edu/~gelman/arm/chap10.pdf
+http://www.stats.ox.ac.uk/~mlunn/lecturenotes1.pdf
+https://imai.fas.harvard.edu/research/files/matchit.pdf
+

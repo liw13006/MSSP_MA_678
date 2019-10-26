@@ -4,7 +4,6 @@ author: "Masanao Yajima"
 date: "October 13, 2018"
 output: learnr::tutorial
 runtime: shiny_prerendered
-bibliography: reference.bib
 ---
 
 ```{r setup, include=FALSE}

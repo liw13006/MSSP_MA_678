@@ -9,7 +9,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,out.width="0.9\\linewidth",dev="pdf",fig.align  = 'center')
-pacman::p_load("ggplot2","knitr","faraway","arm","hett","data.table","foreign","car","VGAM","MASS")
+pacman::p_load("ggplot2","knitr","faraway","arm","hett","data.table","foreign","car","VGAM","MASS",dplyr,tidyr)
 ```
 
 
@@ -123,7 +123,7 @@ summary(fit.1)
 
 ggplot(fit.1)+aes(x = .fitted, y = .stdresid)+geom_jitter(height = .01,width = .5)+ggtitle("Jitterplot for standardized residuals")
 
-ggplot(tab2)+aes(x = T11, y = y1) + geom_jitter(aes(color = factor(x1)))+xlab("Treatment")+ylab("Response")+geom_jitter(aes(y = fit.1$fitted.values),alpha = .01,fill = NA)+geom_abline(intercept = coef(fit.1)[1],slope = coef(fit.1)[2],alpha = .5,color = "green",linetype = 1,size = 1)+geom_abline(intercept = coef(fit.1)[1]+coef(fit.1)[3],slope = coef(fit.1)[2],alpha = .3,color = "orange",linetype = 2,size = 1)
+ggplot(tab2)+aes(x = T11, y = y1) + geom_jitter(aes(color = factor(x1)))+xlab("Treatment")+ylab("Response")+geom_jitter(aes(y = fit.1$fitted.values),alpha = .01,fill = NA)+geom_abline(intercept = coef(fit.1)[1],slope = coef(fit.1)[2],alpha = .5,color = "green",linetype = 1,size = 1)+geom_abline(intercept = coef(fit.1)[1]+coef(fit.1)[3],slope = coef(fit.1)[2],alpha = .3,color = "orange",linetype = 2,size = 1)+labs(color = "Covariates x ")
 ```
 
 For linear models the coefficient of $T11$ is estimated to be 1.314, and the standard error is estimated as 0.1058.
@@ -169,6 +169,36 @@ a. No treatment effect,
 b. Constant treatment effect,
 c. Treatment effect increasing with $x$.
 
+```{r}
+y.noeffect = c(4,6,4,6,4,6,4,6)
+y.noef1 = dumb(y.noeffect,numofsubs)
+noef.table <- data.frame(cbind(y.noef1,x1,T11))%>%dplyr::mutate(T11 = factor(T11))
+ggplot(noef.table)+aes(y = y.noef1)+
+  scale_shape_manual(values=c(1, 16))+
+  geom_jitter(aes(x = x1,shape = T11,color = T11,fill = T11))+
+  ylab("y")+xlab("x")+ggtitle("example of no effect")+labs(shape = "Treatment",fill = "Treatment",color = "Treatment")
+
+tab2 <- tab2%>%mutate(T11 = factor(T11))
+ggplot(tab2)+aes(x = x1, y = y1) + geom_jitter(aes(x = x1,shape = T11,color = T11,fill = T11))+
+  scale_shape_manual(values=c(1, 16))+
+  ylab("y")+xlab("x")+ggtitle("example of constant effect")+labs(shape = "Treatment",fill = "Treatment",color = "Treatment")
+
+
+x.new = c(0,1,0,2,0,3,0,4)
+y.new <- c(4,4.5,6,8,4,5,6,10)
+
+x.new <- dumb(x.new,numofsubs)
+y.new <- dumb(y.new,numofsubs)
+
+new.table <- data.frame(cbind(y.new,x.new,T11))%>%dplyr::mutate(T11 = factor(T11))
+ggplot(new.table)+aes(y = y.new)+
+  scale_shape_manual(values=c(1, 16))+
+  geom_jitter(aes(x = x.new,shape = T11,color = T11,fill = T11))+
+  ylab("y")+xlab("x")+ggtitle("example of treatment effect changing with x")+labs(shape = "Treatment",fill = "Treatment",color = "Treatment")
+
+```
+
+
 ## Hypothetical Study
 Consider a study with an outcome, $y$, a treatment indicator, $T$ , and a single confounding covariate, $x$. Draw a scatterplot of treatment and control observations that demonstrates each of the following:
 (a) A scenario where the difference in means estimate would not capture the true treatment effect but a regression of $y$ on $x$ and $T$ would yield the correct estimate.
@@ -179,7 +209,7 @@ The folder `cows` contains data from an agricultural experiment that was conduct
 
 Four diets (treatments) were considered, corresponding to different levels of the additive, and three variables were recorded before treatment assignment: lactation number (seasons of lactation), age, and initial weight of cow.
 
-Cows were initially assigned to treatments completely at random, and then the distributions of the three covariates were checked for balance across the treat- ment groups; several randomizations were tried, and the one that produced the "best"balance with respect to the three covariates was chosen. The treatment assignment is ignorable (because it depends only on fully observed covariates and not on unrecorded variables such as the physical appearances of the cows or the times at which the cows entered the study) but unknown (because the decisions whether to rerandomize are not explained).
+Cows were initially assigned to treatments completely at random, and then the distributions of the three covariates were checked for balance across the treatment groups; several randomizations were tried, and the one that produced the "best"balance with respect to the three covariates was chosen. The treatment assignment is ignorable (because it depends only on fully observed covariates and not on unrecorded variables such as the physical appearances of the cows or the times at which the cows entered the study) but unknown (because the decisions whether to rerandomize are not explained).
 We shall consider different estimates of the effect of additive on the mean daily milk fat produced.
 a. Consider the simple regression of mean daily milk fat on the level of additive. Compute the estimated treatment effect and standard error, and explain why this is not a completely appropriate analysis given the randomization used.
 b. Add more predictors to the model. Explain your choice of which variables to include. Compare your estimated treatment effect to the result from (a).

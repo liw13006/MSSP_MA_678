@@ -1,7 +1,7 @@
 ---
 title: "homework 07"
-author: "Name"
-date: "November 1, 2018"
+author: "Weiling Li"
+date: "November 8, 2019"
 output:
   pdf_document: default
   html_document: default
@@ -52,75 +52,232 @@ hiv.data<-hiv.data[complete.cases(hiv.data[,list(y,time,age.baseline,treatment)]
 
 1. Graph the outcome (the CD4 percentage, on the square root scale) for each child as a function of time.
 ```{r}
-
+ggplot(hiv.data)+aes(x = time, y = y, color = factor(newpid))+geom_line(show.legend = FALSE)
 
 ```
 
 2. Each child's data has a time course that can be summarized by a linear fit. Estimate these lines and plot them for all the children.
 
 ```{r}
+ggplot(hiv.data)+aes(x = time, y = y, color = factor(newpid))+
+  #geom_point(show.legend = FALSE)+
+  geom_smooth(method = "lm",se = FALSE,show.legend = FALSE)
 
+fit.lm <- lm(data = hiv.data,y~time+factor(newpid)-1)
+lm.coef <- data.frame(coef(fit.lm)[-1])
+lm.coef.time <- coef(fit.lm)[1]
 ```
 
 
 3. Set up a model for the children's slopes and intercepts as a function of the treatment and age at baseline. Estimate this model using the two-step procedure–first estimate the intercept and slope separately for each child, then fit the between-child models using the point estimates from the first step.
 ```{r}
+fit.1 <- lm(data = hiv.data, y~ time +factor(newpid)-1  )
+#summary(fit.1)
+id <- hiv.data$newpid%>%unique()
+alphas <- coef(fit.1)[-1]
 
+group.alpha <- data.frame(cbind(id,alphas))
+colnames( group.alpha) <- c("newpid","alpha") 
+group.data <- hiv.data%>%dplyr::select(newpid,treatment,age.baseline)%>%dplyr::distinct()
+group.data.1 <- dplyr::left_join(group.alpha,group.data)
+fit.2 <- lm(data = group.data.1,alpha~factor(treatment)+age.baseline)
+summary(fit.2)
 ```
-
 
 4. Write a model predicting CD4 percentage as a function of time with varying intercepts across children. Fit using `lmer()` and interpret the coefficient for time.
 ```{r}
-
+display(fit.3 <- lmer(data = hiv.data, y~ time + (1|newpid)))
+lmer.coef.1 <- coef(fit.3)$newpid
+#hiv.data1 <- hiv.data%>%dplyr::mutate(newpid = factor(newpid))
+#summary(fit.4 <- lmer(data = hiv.data1, y~ time + (1|newpid)))
 ```
+The coefficient of time stats that for any child within or outside the groups, 1 unit increase in `time` will the sqrt of `y` is expected to decrease -0.36609.
+
 
 
 5. Extend the model in (4) to include child-level predictors (that is, group-level predictors) for treatment and age at baseline. Fit using `lmer()` and interpret the coefficients on time, treatment, and age at baseline.
 
 ```{r}
-
+#hiv.data.1 <- hiv.data1%>%dplyr::mutate(treatment = factor(treatment))
+display(fit.4 <- lmer(data = hiv.data, y~ time + treatment + age.baseline +  (1|newpid)))
+lmer.coef.2 <- coef(fit.4)$newpid
 ```
+
+The coefficient of time stays the same as before with little value changed to -0.36216, and need to hold other variables at constant. The treatment coef states that by holding time and age.baseline constant, for treatment 2 patient, the square root of CD4 percentage will increase 0.18, while holding other variables as constant. The age.baseline's coef stats that, by holding other vairables at constant, 1 unit increase in age.baseline is associated with 0.11945 decrease of square root CD4 percentage.
 
 6. Investigate the change in partial pooling from (4) to (5) both graphically and numerically.
 
-```{r}
+Numerically, the pooling effect does not change much, model from question (4) has $\sigma_{\alpha}^2 : \sigma_{y}^2 = 1.40^2 : 0.77^2 = 3.3$ which means that the group level estimate is less meaningful than $1/3.3 = 0.30$ individual observation. In another word, individual level prediction is more reliable. model from question (5) has $\sigma_{\alpha}^2 : \sigma_{y}^2 = 1.37^2 : 0.77^2 = 3.16$ which is essentially saying the same thing, while the pooling effect is stronger than (4), but the actual effect is miniscule.
 
+graphically, for almost all patient, we should expect that there will be so little pooling effect, 1st is the time and varing intercept plot for two of the patient
+```{r}
+#y_hat_1 <- predict(fit.3)
+#y_hat_2 <- predict(fit.4)
+
+
+newpid <- hiv.data%>%dplyr::select(newpid)%>%dplyr::mutate(newpid = as.character(newpid))%>%dplyr::distinct()%>%dplyr::pull()
+
+lmer.coef.1.add <- dplyr::mutate(lmer.coef.1,newpid = as.numeric(newpid))
+lmer.coef.1.pool <- fixef(fit.3)
+lmer.coef.2.add <- dplyr::mutate(lmer.coef.2,newpid = as.numeric(newpid))
+lmer.coef.2.pool <- fixef(fit.4)
+
+newpid.info <- dplyr::select(group.data.1,newpid,treatment,age.baseline)
+colnames(newpid.info) <- c("newpid","treatment.pid","age.baseline.pid")
+colnames(lmer.coef.1.add) <- c("intercept","time","newpid")
+intercept <- lmer.coef.1.add$intercept
+
+ggplot(lmer.coef.1.add)+
+  geom_abline(aes(intercept = intercept[2] ,slope = lmer.coef.1.add$time[2],color = "Partial pooing"))+
+  geom_abline(aes(intercept = lmer.coef.1.pool[1],slope = lmer.coef.1.pool[2],color = "Complete pooling"),size = 1.5)+
+  geom_abline(aes(intercept = lm.coef$coef.fit.lm...1.[2],slope = lm.coef.time,color = "No pooling"),linetype ="dashed",size = 1.5)+
+  ylim(c(0,7.5))+
+  xlim(c(0,2))+
+  theme(legend.position="bottom")+
+  ggtitle("Patient ID 2")
+
+ggplot(lmer.coef.1.add)+
+  geom_abline(aes(intercept = intercept[3] ,slope = lmer.coef.1.add$time[3],color = "Partial pooing"))+
+  geom_abline(aes(intercept = lmer.coef.1.pool[1],slope = lmer.coef.1.pool[2],color = "Complete pooling"),size = 1.5)+
+  geom_abline(aes(intercept = lm.coef$coef.fit.lm...1.[3],slope = lm.coef.time,color = "No pooling"),linetype ="dashed",size = 1.5)+
+  ylim(c(0,7.5))+
+  xlim(c(0,2))+
+  theme(legend.position="bottom")+
+  ggtitle("Patient ID 3")
+
+```
+
+The same happened to the later model as well
+
+```{r}
+lmer.coef.2.tot <- dplyr::left_join(lmer.coef.2.add,newpid.info,by = "newpid")%>%dplyr::mutate(intercept = `(Intercept)`+treatment*treatment.pid+age.baseline*age.baseline.pid,intercept.pool = lmer.coef.2.pool[1]+treatment.pid*lmer.coef.2.pool[2]+age.baseline.pid*lmer.coef.2.pool[3])
+
+intercept.2 <- lmer.coef.2.tot%>%dplyr::select(intercept)%>%dplyr::pull()
+intercept.3 <- lmer.coef.2.tot%>%dplyr::select(intercept.pool)%>%dplyr::pull()
+
+ggplot(lmer.coef.1.add)+
+  geom_abline(aes(intercept = intercept.2[2] ,slope = lmer.coef.2.pool[2],color = "Partial pooing"))+
+  geom_abline(aes(intercept = intercept.3[2],slope = lmer.coef.2.pool[2],color = "Complete pooling"),size = 1.5)+
+  geom_abline(aes(intercept = lm.coef$coef.fit.lm...1.[2],slope = lm.coef.time,color = "No pooling"),linetype ="dashed",size = 1.5)+
+  ylim(c(0,7.5))+
+  xlim(c(0,2))+
+  theme(legend.position="bottom")+
+  ggtitle("Patient ID 2, second model")
+
+ggplot(lmer.coef.1.add)+
+  geom_abline(aes(intercept = intercept.2[3] ,slope = lmer.coef.2.pool[3],color = "Partial pooing"))+
+  geom_abline(aes(intercept = intercept.3[3],slope = lmer.coef.2.pool[2],color = "Complete pooling"),size = 1.5)+
+  geom_abline(aes(intercept = lm.coef$coef.fit.lm...1.[3],slope = lm.coef.time,color = "No pooling"),linetype ="dashed",size = 1.5)+
+  ylim(c(0,7.5))+
+  xlim(c(0,2))+
+  theme(legend.position="bottom")+
+  ggtitle("Patient ID 3, second model")
 ```
 
 
 7. Use the model fit from (5) to generate simulation of predicted CD4 percentages for each child in the dataset at a hypothetical next time point.
 
+Assume the next hypothetical time point is 2(because the largest time point is 1.9x)
 ```{r}
+new.pred <- newpid.info%>%dplyr::mutate(time = 2)
+colnames(new.pred) <- c("newpid","treatment","age.baseline","time")
 
+new.pred <- new.pred%>%dplyr::mutate(y.hat = predict(fit.4,new.pred))
+
+## Calculate the point of prediction of each patient at time = 2, print the 1st 10
+y.time2.mean = predict(fit.4,new.pred)
+print(y.time2.mean[1:5])
+
+sigma.y = sigma.hat(fit.4)$sigma$data
+y.sim = c()
+for (i in 1:length(y.time2.mean)){
+ y.sim[i] =rnorm(1,y.time2.mean[i],sigma.y)
+}
+
+## sample of simulated y
+print(y.sim[1:10])
 ```
 
 8. Use the same model fit to generate simulations of CD4 percentages at each of the time periods for a new child who was 4 years old at baseline.
 
-```{r}
+Assuming treatment is 1.
 
+```{r}
+time.Q8 = seq(0,2,.5)
+age.baseline.Q8 = rep(4,length(time.Q8))
+treatment.Q8 <- rep(1,length(time.Q8))
+Q8.table <- matrix(cbind(time.Q8,treatment.Q8,age.baseline.Q8),ncol = 3)
+Q8.table
+#colnames(Q8.table) <- c("time","age.baseline","treatment")
+fixef(fit.4)
+mod4.intercept <- as.numeric(fixef(fit.4)[1])
+mod4.coef <- matrix(fixef(fit.4)[-1],ncol = 1)
+mod4.coef
+
+mod4.y.hat <- mod4.intercept+Q8.table%*%mod4.coef
+
+mod4.y.sim <- c()
+
+
+for (i in 1:length(mod4.y.hat)){
+ mod4.y.sim[i] =rnorm(1,mod4.y.hat[i],sigma.y)
+}
+
+ggplot()+
+  aes(x = time.Q8,y = mod4.y.sim)+
+  geom_point()+geom_smooth(method = "lm",se = FALSE)+ #The no pooling line estimated line
+  geom_line(aes(y = mod4.y.hat),color = "orange",linetype = "dashed")+ # the real generating line
+  geom_abline(intercept = mod4.y.hat[1],slope = lmer.coef.2.pool[2],alpha = .1) # complete pooled
 ```
 
 
 9. Posterior predictive checking: continuing the previous exercise, use the fitted model from (5) to simulate a new dataset of CD4 percentages (with the same sample size and ages of the original dataset) for the final time point of the study, and record the average CD4 percentage in this sample. Repeat this process 1000 times and compare the simulated distribution to the observed CD4 percentage at the final time point for the actual data.
 ```{r}
+Q9.tabe <- hiv.data%>%dplyr::mutate(flag = dplyr::lead(newpid)-newpid)%>%
+  dplyr::filter(is.na(flag)|flag != 0)%>%
+  dplyr::select(y,newpid,time,treatment,age.baseline)
 
+Q9.tabe.1 <- lmer.coef.2.tot%>%dplyr::select(newpid,intercept)
+
+Q9.tabe.1 <- dplyr::left_join(Q9.tabe,Q9.tabe.1)%>%dplyr::mutate(y.hat = intercept - time*lmer.coef.2.pool[2])
+
+## pick a patient
+pid <- sample(Q9.tabe.1$newpid,1)
+## gather patient info
+info.pid <- Q9.tabe.1%>%dplyr::filter(newpid == pid)
+y.pid = info.pid$y
+y.hat.base <- info.pid$y.hat
+y.hat.sim <- c()
+for(i in 1:1000){
+  y.hat.sim[i] <- rnorm(1,y.hat.base,sigma.y)
+}
+ggplot()+aes(x = y.hat.sim)+
+  geom_histogram(bins = 30, alpha = .7,aes(color = "y_pred"),fill = NA)+ ## distribution of y_pred
+  geom_vline(aes(xintercept = y.pid,color = "y_obs"))
 ```
 
-10. Extend the modelto allow for varying slopes for the time predictor.
+10. Extend the model to allow for varying slopes for the time predictor.
 ```{r}
+display(fit.5 <- lmer(data = hiv.data, y~ time + treatment + age.baseline +  (1+time|newpid)))
 
+display(fit.7 <- lmer(data = hiv.data, y~ time + treatment + age.baseline +  (time-1|newpid)+(1|newpid)))
 ```
 
 
 11. Next fit a model that does not allow for varying slopes but does allow for different coefficients for each time point (rather than fitting the linear trend).
 ```{r}
-
+display(fit.6 <- lmer(data = hiv.data, y~ factor(round(time,2)) + treatment + age.baseline +  (1|newpid)))
 ```
 
 
 12. Compare the results of these models both numerically and graphically.
 ```{r}
-
+print("varing intercept and slope, with correlated slope and intercept")
+sigma.hat(fit.5)
+print("varing intercept and slope, with no correlation")
+sigma.hat(fit.7)
+print("factorized time")
+sigma.hat(fit.6)
 ```
 
 
@@ -141,34 +298,91 @@ olympics1932$criterion<-str_trim(olympics1932_na$criterion)
 1. Construct a $7\times 7 \times 2$ array of the data (ordered by skater, judge, and judging criterion).
 
 ```{r}
-
+olypics1932.split <- split(olympics1932, olympics1932$criterion)
 ```
 
 2. Reformulate the data as a $98\times 4$ array (similar to the top table in Figure 11.7), where the first two columns are the technical merit and artistic impression scores, the third column is a skater ID, and the fourth column is a judge ID.
 
 ```{r}
+Q2.table <- tidyr::pivot_longer(data = olympics1932,cols = 3:9,names_to = "judge_num",values_to = "scores")%>%tidyr::pivot_wider(names_from = criterion,values_from = scores)%>%dplyr::select(Performance,Program,pair,judge_num)
 
+kable(Q2.table,format = "latex",align = "c",caption = "Judge scores table")
 ```
 
 3. Add another column to this matrix representing an indicator variable that equals 1 if the skater and judge are from the same country, or 0 otherwise.
 
 ```{r}
-
+Q3.table <- Q2.table%>%dplyr::mutate(indicator = dplyr::if_else(pair == 3 & judge_num %in% "judge_1",1,0))
 ```
 
 4. Write the notation for a non-nested multilevel model (varying across skaters and judges) for the technical merit ratings and fit using lmer().
-```{r}
 
+$$Rating_{tech} \sim N(\overline{rating}+Skater_{j\{i\}}+Judge_{k\{i\}}) , i = 1,...,49  $$
+$$Skater_{j\{i\}} \sim N(0,\sigma_{S}^2)$$
+$$Judge_{k\{i\}} \sim N(0,\sigma_{J}^2)$$
+
+```{r}
+display(fit.8 <- lmer(data  = Q2.table,Performance~1+(1|pair)+(1|judge_num)))
 ```
 
 5. Fit the model in (4) using the artistic impression ratings.
 ```{r}
-
+display(fit.9 <- lmer(data  = Q2.table,Program~1+(1|pair)+(1|judge_num)))
 ```
 
 6. Display your results for both outcomes graphically.
 
 ```{r}
+judge.id <- rep(c(1,2,3,4,5,6,7),7)
+
+resid.1 <- predict(fit.8)-fixef(fit.8)
+resid.2 <- Q2.table$Performance-predict(fit.8)
+Q6.table <- Q2.table%>%dplyr::mutate(judge.id = judge.id,resid.1)
+
+
+ggplot()+
+  aes(x = Q2.table$pair,y = judge.id,fill = resid.1 )+
+  geom_tile(color = "white")+
+  xlab("Skater ID")+
+  ylab("Judge ID")+
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, space = "Lab", 
+                       name="Deviation\nfrom mean")+
+  labs(title = "Technical merit rating")
+
+ggplot()+
+  aes(x = Q2.table$pair,y = judge.id,fill = Q2.table$Performance )+
+  geom_tile(color = "white")+
+  xlab("Skater ID")+
+  ylab("Judge ID")+
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = fixef(fit.8), space = "Lab", 
+                       name="True val")+
+  labs(title = "Technical merit rating")
+
+
+resid.3 <- predict(fit.9)-fixef(fit.9)
+resid.4 <- Q2.table$Program-predict(fit.9)
+
+ggplot()+
+  aes(x = Q2.table$pair,y = judge.id,fill = resid.3 )+
+  geom_tile(color = "white")+
+  xlab("Skater ID")+
+  ylab("Judge ID")+
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, space = "Lab", 
+                       name="Deviation\nfrom mean")+
+  labs(title = "Artistic Impression rating")
+
+ggplot()+
+  aes(x = Q2.table$pair,y = judge.id,fill = Q2.table$Program )+
+  geom_tile(color = "white")+
+  xlab("Skater ID")+
+  ylab("Judge ID")+
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = fixef(fit.9), space = "Lab", 
+                       name="True val")+
+  labs(title = "Artistic Impression rating")
 
 ```
 
@@ -181,6 +395,8 @@ olympics1932$criterion<-str_trim(olympics1932_na$criterion)
 ## Different ways to write the model:
 
 Using any data that are appropriate for a multilevel model, write the model in the five ways discussed in Section 12.5 of Gelman and Hill.
+
+$$$$
 
 ## Models for adjusting individual ratings: 
 

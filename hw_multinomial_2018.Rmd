@@ -1,0 +1,310 @@
+---
+title: "MA678 homework 05"
+subtitle: "Multinomial Regression"
+author: "Weiling Li"
+date: "Nov 18, 2019"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,out.width="0.9\\linewidth",dev="pdf",fig.align  = 'center')
+pacman::p_load(
+  "ggplot2",
+  "knitr",
+  "arm",
+  "data.table",
+  "foreign",
+  "car",
+  "faraway",
+  "nnet",
+  "reshape2",
+  "VGAM",
+  "splines"
+)
+```
+
+## Multinomial logit: 
+Using the individual-level survey data from the 2000 National Election Study (data in folder nes), predict party identification (which is on a 7-point scale) using ideology and demographics with an ordered multinomial logit model.
+```{r, echo=FALSE}
+nes5200<-read.dta("http://www.stat.columbia.edu/~gelman/arm/examples/nes/nes5200_processed_voters_realideo.dta")
+#saveRDS(nes5200,"nes5200.rds")
+#nes5200<-readRDS("nes5200.rds")
+# logistic regression of vote preference on income
+nes5200_dt <- data.table(nes5200)
+  yr <- 2000
+nes5200_dt_s<-nes5200_dt[ year==yr,]
+nes5200_dt_s$income <- droplevels(nes5200_dt_s$income)
+nes5200_dt_s$partyid7 <- droplevels(nes5200_dt_s$partyid7)
+
+nes5200_dt_s$gender <- factor(nes5200_dt_s$gender, labels=c("male", "female"))
+nes5200_dt_s$race <- factor(nes5200_dt_s$race, labels=c("white", "black", "asian", 
+                                    "native american", "hispanic"))
+nes5200_dt_s$south <- factor(nes5200_dt_s$south)
+nes5200_dt_s$ideo <- factor(nes5200_dt_s$ideo, labels=c("liberal", "moderate", "conservative"))
+
+nes_data_comp<-nes5200_dt_s[complete.cases(nes5200_dt_s[,list(partyid7,income,ideo,female,white)])]
+nes_data_comp$ideology <- scale(nes_data_comp$ideo_feel,center=TRUE)
+```
+1. Summarize the parameter estimates numerically and also graphically. 
+
+```{r}
+#filter out cases where `partyid7` is NA
+x=nes5200$partyid7
+nes5200<-nes5200[!is.na(levels(x)[x]),]
+#exclude apolitical to have an ordered outcome
+nes5200<-subset(nes5200,partyid7!="apolitical")
+nes5200$partyid7<-factor(nes5200$partyid7)
+multi.log<-polr(partyid7~ideo+race+age_10,data=nes5200,Hess=TRUE)
+summary(multi.log)
+#summary(nes_data_comp)
+#modtest<-multinom(partyid7~ideo+race,family=logit,data=nes_data_comp)
+#summary(modtest)
+```
+
+2. Explain the results from the fitted model.
+```{r}
+#confint(multi.log)
+```
+
+3. Use a binned residual plot to assess the fit of the model.
+```{r}
+residuals(multi.log)
+#binnedplot(predict(multi.log),resid(multi.log))
+```
+
+
+
+
+# High School and Beyond 
+The hsb data was collected as a subset of the High School and Beyond study conducted by the National Education Longitudinal Studies program of the National Center for Education Statistics. The variables are gender; race; socioeconomic status; school type; chosen high school program type; scores on reading, writing, math, science, and social studies. We want to determine which factors are related to the choice of the type of program—academic, vocational, or general—that the students pursue in high school. The response is multinomial with three levels.
+
+```{r}
+data(hsb)
+?hsb
+```
+
+1. Fit a trinomial response model with the other relevant variables as predictors (untransformed).
+```{r}
+mod2<-multinom(prog~gender+race+ses+schtyp+read+write+math+science+socst,hsb,trace=FALSE)
+summary(mod2)
+```
+
+2. For the student with id 99, compute the predicted probabilities of the three possible choices.
+
+```{r}
+hsb[99,]
+predict(mod2,newdata=hsb[99,],'prob')
+```
+
+
+# Happiness
+Data were collected from 39 students in a University of Chicago MBA class and may be found in the dataset `happy`.
+```{r}
+library(faraway)
+data(happy)
+?happy
+```
+
+1. Build a model for the level of happiness as a function of the other variables.
+```{r}
+happy$happyF<-factor(happy$happy)
+happy$sexF<-factor(happy$sex)
+happy$loveF<-factor(happy$love)
+happy$workF<-factor(happy$work)
+
+#A proportional odds model:
+model1<-polr(happyF~money+sexF+loveF+workF,happy)
+summary(model1)
+c(deviance(model1),model1$edf)
+
+#AIC-based variable selection method:
+model2<-step(model1)
+summary(model2)
+c(deviance(model2),model2$edf)
+
+#comparison
+anova(model1,model2)
+
+#An ordered probit model:
+model3<-polr(happyF~money+sexF+loveF+workF,method="probit",happy)
+summary(model3)
+c(deviance(model3),model3$edf)
+
+#AIC-based variable selection method:
+model4<-step(model3)
+summary(model3)
+c(deviance(model4),model4$edf)
+
+#comparison:
+anova(model3,model4)
+
+```
+
+2. Interpret the parameters of your chosen model.
+
+The interpretation are done using the proportional odds model with the covariates money, love and work. The chosen model is created so that the default level is money=0, love=1,work=1, corresponding to a person that has no annual family income, is lonely and has no job. The log-odds for this default person to be happyniess category 2 or smaller against 3 or higher is 0.0389, hence the odds is exp(0.0389)=1.04. 
+The coefficients in the output corresponds to the beta, and can be interpreted in the following way. If the income is increased by one unit ($1000) the odds of moving from a given happiness category to one category higher increase by a factor of exp(0.01657)=1.0167. This is equivalent as to say thay standing in happiness category 2, the log-odds for being in that category or lower will be smaller if the money-variable is increased with 3 units. 
+
+3. Predict the happiness distribution for subject whose parents earn $30,000 a year,
+who is lonely, not sexually active and has no job.
+```{r}
+#predict with the proportional odds model:
+round(predict(model2,data.frame(money=30,sexF="0",loveF="1",workF="1"),type="probs"),3)
+#check the predictive performance for the proportional odds model:
+skattningar1<-predict(model2)
+table(skattningar1,happy$happy)
+
+#predict with the ordered probit model:
+round(predict(model4,data.frame(money=30,sexF="0",loveF="1",workF="1"),type="probs"),3)
+
+#check the predictive performance for the ordered probit model:
+skattningar2<-predict(model4)
+table(skattningar2,happy$happy)
+```
+
+# newspaper survey on Vietnam War
+A student newspaper conducted a survey of student opinions about the Vietnam War in May 1967. Responses were classified by sex, year in the program and one of four opinions. The survey was voluntary. The data may be found in the dataset `uncviet`.  Treat the opinion as the response and the sex and year as predictors. Build a proportional odds model, giving an interpretation to the estimates.
+
+```{r}
+data(uncviet)
+?uncviet
+modelfit<-polr(policy~sex+year,uncviet)
+summary(modelfit)
+```
+Taking the level of political opinion as outcome, sex and year as predictors. If the tested person is a male, the odds ratio of political opinion would decrease logit inverse (-7.183e-16). If the tested student is a graduate student, the odds ratio of political opinion would increase logit inverse (5.902e-16). Same for the other three year related coefficients. 
+
+# pneumonoconiosis of coal miners
+The pneumo data gives the number of coal miners classified by radiological examination into one of three categories of pneumonoconiosis and by the number of years spent working at the coal face divided into eight categories.
+
+```{r}
+library(faraway)
+data(pneumo,package="faraway")
+?pneumo
+```
+
+1. Treating the pneumonoconiosis status as response variable as nominal, build a model for predicting the frequency of the three outcomes in terms of length of service and use it to predict the outcome for a miner with 25 years of service.
+
+```{r}
+
+```
+
+2. Repeat the analysis with the pneumonoconiosis status being treated as ordinal. 
+
+```{r}
+
+```
+
+3.Now treat the response variable as hierarchical with top level indicating whether
+the miner has the disease and the second level indicating, given they have the
+disease, whether they have a moderate or severe case. 
+
+```{r}
+
+
+```
+
+4.  Compare the three analyses.
+
+```{r}
+
+```
+
+
+
+
+
+# (optional) Multinomial choice models: 
+
+Pardoe and Simonton (2006) fit a discrete choice model to predict winners of the Academy Awards. Their data are in the folder academy.awards.
+
+name  | description
+------|----------------------------------------
+No    | unique nominee identifier
+Year  | movie release year (not ceremony year)
+Comp  | identifier for year/category
+Name  | short nominee name
+PP    | best picture indicator
+DD    | best director indicator
+MM    | lead actor indicator
+FF    | lead actress indicator
+Ch    | 1 if win, 2 if lose
+Movie | short movie name
+Nom   | total oscar nominations
+Pic   | picture nom
+Dir   | director nom
+Aml   | actor male lead nom
+Afl   | actor female lead nom
+Ams   | actor male supporting nom
+Afs   | actor female supporting nom
+Scr   | screenplay nom
+Cin   | cinematography nom
+Art   | art direction nom
+Cos   | costume nom
+Sco   | score nom
+Son   | song nom
+Edi   | editing nom
+Sou   | sound mixing nom
+For   | foreign nom
+Anf   | animated feature nom
+Eff   | sound editing/visual effects nom
+Mak   | makeup nom
+Dan   | dance nom
+AD    | assistant director nom
+PrNl  | previous lead actor nominations
+PrWl  | previous lead actor wins
+PrNs  | previous supporting actor nominations
+PrWs  | previous supporting actor wins
+PrN   | total previous actor/director nominations
+PrW   | total previous actor/director wins
+Gdr   | golden globe drama win
+Gmc   | golden globe musical/comedy win
+Gd    | golden globe director win
+Gm1   | golden globe male lead actor drama win
+Gm2   | golden globe male lead actor musical/comedy win
+Gf1   | golden globe female lead actor drama win
+Gf2   | golden globe female lead actor musical/comedy win
+PGA   | producer's guild of america win
+DGA   | director's guild of america win
+SAM   | screen actor's guild male win
+SAF   | screen actor's guild female win
+PN    | PP*Nom
+PD    | PP*Dir
+DN    | DD*Nom
+DP    | DD*Pic
+DPrN  | DD*PrN
+DPrW  | DD*PrW
+MN    | MM*Nom
+MP    | MM*Pic
+MPrN  | MM*PrNl
+MPrW  | MM*PrWl
+FN    | FF*Nom
+FP    | FF*Pic
+FPrN  | FF*PrNl
+FPrW  | FF*PrWl
+
+```{r, echo=FALSE}
+# coefficient for black in 1964 to illustrate nonidentifiability of logistic regression for chap 5 hwk
+oscar<-read.csv("http://www.stat.columbia.edu/~gelman/arm/examples/academy.awards/oscars.csv",header=TRUE)
+#saveRDS(oscar,"oscar.rds")
+#oscar<-readRDS("oscar.rds")
+```
+
+1. Fit your own model to these data.
+
+```{r}
+
+```
+
+2. Display the fitted model on a plot that also shows the data.
+
+```{r}
+
+```
+
+3. Make a plot displaying the uncertainty in inferences from the fitted model.
+
+```{r}
+
+```

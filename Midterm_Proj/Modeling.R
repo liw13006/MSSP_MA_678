@@ -21,7 +21,7 @@ fit_simple <- glm(data = lendingclub_model_train%>%dplyr::select(-id), formula =
 
 
 for_aic <- step(glm(data = lendingclub_model_train%>%dplyr::select(-id), formula = y~1,family = binomial),direction = "forward",scope = formula(fit_simple),k = 2,trace = 0)
-#binnedplot(for_aic$fitted.values,for_aic$residuals)
+binnedplot(for_aic$fitted.values,for_aic$residuals)
 
 
 ## use glmer

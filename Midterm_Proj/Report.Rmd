@@ -27,7 +27,7 @@ To answer this question, we proposed a roadmap to examine the pre- and post-inte
 
 The data used in this project cames from lending club. It included all the issued loans from 2012 to 2015 and detailed information not only the loans themselves also the credit related attributes of the borrowes at the point of issuing. \newline
 \newline
-Originally, there are 42,390 unique issuing record and each has over 150 different variables describing the loan and the borrower. Due to the scope of this project, only 20 variables were picked and eventally, 11 were used to construct the model. The 11 variables are:
+Originally, there are 42,390 unique issuing record and each has over 150 different variables describing the loan and the borrower. Due to the scope of this project, only 20 variables were picked and eventally, 11 were used to construct the model. The 12 variables are:
 
 * `y`: Binary variables, $1$ indicates the loan was determined as a charged off. $0$ indicates no charged off
 * `fico_10`: Borrower's fico score(high bound) at the point of requesting a loan. 
@@ -35,12 +35,13 @@ Originally, there are 42,390 unique issuing record and each has over 150 differe
 * `inq_last_6_mths`: The borrower's number of inqueries during 6 months before requesting a loan.
 * `open_acc`: The number of opening financial accounts of the borrower(bank accounts or fund accounts, etc.) at the time of requesting a loan.
 * `dti_scale`: `dti` is the ratio of borrower's total amount of debt to total yearly income, after issuing the loan. this variable was scaled such that it is centered at it's mean and divided by standard deviation estimates.
-* `installment_log`: The log of monthly installment of the loan + interest rate.
+* `installment_log`: The log of monthly installment of the loan + interest rate, centered at it's mean
 * `addr_state`: The borrower's state of residence at the point of requesting the loan.
 * `sub_grade`: The borrower's [**sub_grade**](https://www.lendingclub.com/foliofn/rateDetail.action) calculated by lending club at the point of issuing the loan. This grade ranges from A to G with each grade being subdivided into 5 grades from 1 to 5.
 * `term`: The expected number of months of paying back the issued loan, for our dataset, only 36 months and 90 months are available.
 * `purpose`: the purpose of the loan, categorized by lending club. a total of 14 categories: credit card, car, small business, other, wedding, debt_consolidation, home_improvement, major_purchase, medical, moving, vacation, house, renewable_energy and education.
 * `emp_length`: Categorical variable describing the length of employment at current position. from `less than 1 year` to `over 10 years` and `not applicable` a total of 12 levels.
+* `delinq_2yrs`: The borrowers occurance of delinquency within last 2 years at the point of loan request.
 * `int_rate`: interest rate calculated at the time of issuing the loan.
 
 ### 2.2 Model Selection
@@ -113,11 +114,12 @@ The source code can be found in the following files:
 
 ### 3.2 Model Building
 
-After EDA, 18 predictors was selected and cleaned(includes scaling, taking log, etc.). the full list of variables is shown below:
+After EDA, 18 predictors was selected and cleaned(includes scaling, taking log, etc.). the full list of variables is shown in `Table. 1`:
 
 ```{r predictors,tidy=TRUE}
-colname_19 <- colnames(lendingclub%>%dplyr::select(-y,-id))
-kable(colname_19,col.names = "variables")
+colname_19 <- data.frame(colnames(lendingclub%>%dplyr::select(-y,-id)))
+kable(colname_19,col.names = "variables",format = "latex",booktabs = TRUE,caption = "Variable used in this project")%>%
+  kable_styling(latex_options = "striped")%>%row_spec(0,bold = T)
 ```
 
 Using the above variables, 2 models were constructed.\newline
@@ -171,6 +173,7 @@ gridExtra::grid.arrange(p1,p2,nrow = 2)
 
 
 #### 4.1.2 Inference
+
 ```{r}
 coef_md_1 <- fixef(ml_fit_aic)
 names_md_1 <- names(coef_md_1)
@@ -178,12 +181,13 @@ names_md_1 <- names(coef_md_1)
 se_md_1 <- se.coef(ml_fit_aic)$fixef
 
 tab_1 <- data.frame(round(cbind(coef_md_1,se_md_1),3))
-kable(tab_1,col.names = c("Coef","SE"),caption = "Fixed Effect of Model 1")
+kable(tab_1,col.names = c("Coef","SE"),caption = "Fixed Effect of Model 1",booktabs = T)%>%
+  kable_styling(latex_options = "striped")%>%row_spec(0,bold = T)
 
 
 ```
 
-For model 1, the fixed effect can be interpret as:
+For model 1, shown in `Table. 2`, the fixed effect can be interpret as:
 
 * `Intercept`: The intercept is hard to interpret, it associated with the probability of charged off for a person with median fico score, 0 inquiry in last 6 months,0 open account,0 delinquency in 2 years, mean dti and mean installment. But without any random effect information.
 
@@ -218,8 +222,10 @@ cat(sprintf("expected occurence of charged of under model 1 is %d",sum(y_pred_in
 ```{r val set 4}
 cat("true observed occurence of charged off in validation set is", sum(lendingclub_model_val$y))
 ```
-The overall distribution of predicted charged off conditioning on the variables are also very similar to the original data
+The overall distribution of predicted charged off conditioning on the variables are also very similar to the original data.
+
 #### 4.2.2 Inference
+
 ```{r}
 coef_md_2 <- fixef(ml_fit_aic_int)
 
@@ -227,18 +233,20 @@ coef_md_2 <- fixef(ml_fit_aic_int)
 se_md_2 <- se.coef(ml_fit_aic_int)$fixef
 
 tab_2 <- data.frame(round(cbind(coef_md_2,se_md_2),3))
-kable(tab_2,col.names = c("Coef","SE"),caption = "Fixed Effect of Model 2")
+kable(tab_2,col.names = c("Coef","SE"),caption = "Fixed Effect of Model 2",booktabs = T)%>%
+  kable_styling(latex_options = "striped")%>%row_spec(0,bold = T)
 
 
 ```
-The same as the 1st model, the intercept value is still very difficult to interpret. It is related to the probability at merely the same condition but with interest rate at the lowest.
+The coefficients are shown in `Table. 3`. The same as the 1st model, the intercept value is still very difficult to interpret. It is related to the probability at merely the same condition but with interest rate at the lowest.
 
-One interesting finding is that, by adding interest rate, the coefficient of fico score, installment changed dramatically. This is a sign indicating that this three variables are confounding covariates. The coefficient of interest rate indicates that each 1% increase of the issuing interest rate is associated with 2% increase of charged off risk when controlling for other fixed effect.
+One interesting finding is that, by adding interest rate, the coefficient of fico score, installment changed dramatically. This is a sign indicating that this three variables are confounding covariates(correlation shown in `Table.4`). The coefficient of interest rate indicates that each 1% increase of the issuing interest rate is associated with 2% increase of charged off risk when controlling for other fixed effect.
 
 ```{r}
 corr_tab <- data.frame(cbind(lendingclub$int_rate_scale,lendingclub$fico_10,lendingclub$installment_log))
 colnames(corr_tab) <- c("interest rate","fico score","installment")
-cor(corr_tab)
+kable(cor(corr_tab),digits = 3,booktabs = T,caption = "Correlation among confounding covariates")%>%
+  kable_styling(latex_options = "striped")%>%row_spec(0,bold = T)
 ```
 
 
@@ -265,11 +273,38 @@ obs_val <- sum(lendingclub_model_val$y)/length(lendingclub_model_val$y)
 for(i in 1:n_sims) md_1_sim[i] <- sum(rbinom(n=n_obs,size = 1,prob = y_pred_ml_aic))/n_obs
 for(i in 1:n_sims) md_2_sim[i] <- sum(rbinom(n=n_obs,size = 1,prob = y_pred_ml_aic_int))/n_obs
 
-ggplot()+geom_violin(aes(x = rep(1,1000),y = md_1_sim,fill = "no interest rate"),alpha = .4)+stat_summary(aes(x = rep(2,1000),y = md_2_sim),fun.data=data_summary)+geom_violin(aes(x = rep(2,1000),y = md_2_sim,fill = "has interest rate"),alpha = .4)+stat_summary(aes(x = rep(1,1000),y = md_1_sim), fun.data=data_summary)+geom_hline(yintercept = obs_val,color = "grey",show.legend = TRUE)+labs(fill = "model difference",title = "simulation of overall charged off rate")
+ggplot()+geom_violin(aes(x = rep(1,1000),y = md_1_sim,fill = "no interest rate"),alpha = .4)+stat_summary(aes(x = rep(2,1000),y = md_2_sim),fun.data=data_summary)+geom_violin(aes(x = rep(2,1000),y = md_2_sim,fill = "has interest rate"),alpha = .4)+stat_summary(aes(x = rep(1,1000),y = md_1_sim), fun.data=data_summary)+geom_hline(yintercept = obs_val,color = "grey",show.legend = TRUE)+labs(fill = "model difference",title = "simulation of overall charged off rate",subtitle = "error bar is 2 standard deviation")+ylab("charged off rate")+theme(axis.title.x = element_blank(),axis.text.x = element_blank())
 ```
-The grey horizontal line i
+The grey horizontal line is the true observation and as we can see from the graph, our estimation is really close to the true observationand the model which has interest rate considered showed an slightly higher estimation. They both estimates the risks as around 15.2% with 95% creditable interval from 14.6% to 15.8%.
+
 ### 5.2 `int_rate` Association Estimation
 
-### 5.3 Future Directions
+The interest rate although has a statistical significant coeficient value, however, the actual value is estimated at 2% increase in risk for every 1% increase in interest rate. However, the actual impact on the model is strongly determined by its variability(meaning the difference between max interest rate and min interest rate).
+```{r int rate variability}
+
+a <- round(unlist(lapply(lendingclub_model_val_2%>%dplyr::select(int_rate_scale,fico_10,inq_last_6mths,open_acc,dti_scale,installment_log,delinq_2yrs),sd))*4)
+b <- round(coef_md_2[-1],3)
+c <- a
+for (i in 1:length(a)){
+  c[i] = a[i]*b[i]
+}
+tab_3 <- data.frame(c)
+colnames(tab_3) <- c("power")
+kable(tab_3,booktabs = T,caption = "estimate power of association")%>%
+  kable_styling(latex_options = "striped")%>%row_spec(0,bold = T)
+```
+
+The power in `table.5` is calculated as the $coef \cdot 4\cdot se$, if we consider the variability of interest rate(which most), the total association of interest rate is the highest among all the fixed effects. It's related to merely 30% changes of the probability in the estimated model.
+
+However, such association can not be interpreted as casual relation. The direction of the effect can be explained in both ways, higher risk estimated by lending club resulting a higher interest rate or higher interest rate causing borrower more likely to have a charged off. To settle this question, one needs to design an experiment which has samples of very similar risks estimated and loan requested with different interest rate. Without such experiment, the interest-rate risk can not be percisely estimated.
+
+### 5.3 Conclusion and Future Directions
+
+The estimated model shows that the interest rate is highly associated with the risk of charged off. However, it is not possible to percisely estimate the true risk of charged off imposed by interest rate. However, even without the interest rate, the model had already provide very close estimation of the risks. This in a sense indecates that ignoring the interest rate risk is not likely to cause a bad risk estimation.
+
+Two future directions:
+
+1. Use `stan_glmer` to get better parameter estimation.
+2. Including the amount owed at the time of charge off into the data, a model can be built to estimate the actual expected loss of money thus improve the risk analysis model to a dollar amount losses.
 
 ## Reference

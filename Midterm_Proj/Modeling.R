@@ -88,4 +88,4 @@ lendingclub_model_val_2%<>%dplyr::mutate(sim = y_pred_int_sim)
 #p2 <- ggplot(lendingclub_model_val_2)+geom_mosaic(aes(x = product(factor(sim),sub_grade),fill = factor(sim)))+theme(axis.text.x = element_text(angle = 45))
 #gridExtra::grid.arrange(p1,p2,nrow = 2)
 
-save(for_aic,lendingclub,lendingclub_model,lendingclub_model_2,lendingclub_model_train,lendingclub_model_train_2,lendingclub_model_val,lendingclub_model_val_2,lendingclub_ori,ml_fit_aic,ml_fit_aic_int,y_pred_sim,y_pred_int_sim,y_pred_sim_nopool,file = "./results/results.Rdata")
+save(for_aic,lendingclub,lendingclub_model,lendingclub_model_2,lendingclub_model_train,lendingclub_model_train_2,lendingclub_model_val,lendingclub_model_val_2,lendingclub_ori,ml_fit_aic,ml_fit_aic_int,y_pred_sim,y_pred_int_sim,y_pred_sim_nopool,y_pred_ml_aic,y_pred_ml_aic_int,file = "./results/results.Rdata")

@@ -1,0 +1,275 @@
+---
+title: "Midterm_Project_Report"
+subtitle: "Risk analysis of interest rates"
+author: "Weiling Li"
+date: "12/6/2019"
+output: pdf_document
+bibliography: ./bib/bib.bib
+---
+
+```{r setup, include=FALSE}
+pacman::p_load(knitr,kableExtra,tidyverse,magrittr,readxl,zoo,lme4,rstanarm,arm,ggcorrplot,ROCR,ggmosaic,lattice)
+knitr::opts_chunk$set(echo = FALSE,message = FALSE,warning = FALSE,tidy = TRUE,fig.align = "left",dpi = 200)
+load("./results/results.Rdata")
+```
+
+## 1. Introduction
+
+When issuing loans, one of the most important thing a issuer needs to consider is the risk of not getting the money back. If a financial entity can calculate the risk at the point of issuing loans. Then it can adjust the interest rate to mitigate the potential loss.\newline
+\newline
+However, there are some doubts that interest rates actually alter the risk of charged off[see @interest-rate-risk], resulting a mismatch between the true risk and the "pre-interest-rate" risk. But how big is the interest-rate risk? How far off are we if the risk is ignored?\newline
+\newline
+To answer this question, we proposed a roadmap to examine the pre- and post-interest-rate risk and a way to exaime the association between the risk of charge-off and the interest-rate.
+
+## 2. Method
+
+### 2.1 Dataset
+
+The data used in this project cames from lending club. It included all the issued loans from 2012 to 2015 and detailed information not only the loans themselves also the credit related attributes of the borrowes at the point of issuing. \newline
+\newline
+Originally, there are 42,390 unique issuing record and each has over 150 different variables describing the loan and the borrower. Due to the scope of this project, only 20 variables were picked and eventally, 11 were used to construct the model. The 11 variables are:
+
+* `y`: Binary variables, $1$ indicates the loan was determined as a charged off. $0$ indicates no charged off
+* `fico_10`: Borrower's fico score(high bound) at the point of requesting a loan. 
+  - This variable is measured at: $\mathrm{fico}\_10 = (\mathrm{fico} -median(\mathrm{fico}))\big/10$
+* `inq_last_6_mths`: The borrower's number of inqueries during 6 months before requesting a loan.
+* `open_acc`: The number of opening financial accounts of the borrower(bank accounts or fund accounts, etc.) at the time of requesting a loan.
+* `dti_scale`: `dti` is the ratio of borrower's total amount of debt to total yearly income, after issuing the loan. this variable was scaled such that it is centered at it's mean and divided by standard deviation estimates.
+* `installment_log`: The log of monthly installment of the loan + interest rate.
+* `addr_state`: The borrower's state of residence at the point of requesting the loan.
+* `sub_grade`: The borrower's [**sub_grade**](https://www.lendingclub.com/foliofn/rateDetail.action) calculated by lending club at the point of issuing the loan. This grade ranges from A to G with each grade being subdivided into 5 grades from 1 to 5.
+* `term`: The expected number of months of paying back the issued loan, for our dataset, only 36 months and 90 months are available.
+* `purpose`: the purpose of the loan, categorized by lending club. a total of 14 categories: credit card, car, small business, other, wedding, debt_consolidation, home_improvement, major_purchase, medical, moving, vacation, house, renewable_energy and education.
+* `emp_length`: Categorical variable describing the length of employment at current position. from `less than 1 year` to `over 10 years` and `not applicable` a total of 12 levels.
+* `int_rate`: interest rate calculated at the time of issuing the loan.
+
+### 2.2 Model Selection
+
+The risk of issuing loans are explained as credit risks. It's definition goes: *the possibility of a loss resulting from a borrower's failure to repay a loan or meet contractual obligations* [see @credit-risk] \newline
+\newline
+In this project, we access this risk by calculating the probabily(not a categorical problem) of a charge off(no repay) based on the borrower's information presented at the time of requesting a loan. Natrually, logistic regression is selected as the model. Multi-level logistic regression model was used because the data itself presented a hierarchical structure(for example, `addr_state`, `sub_grades`, `emp_length` are all group level variables).\newline
+\newline
+In the model, 11 variables can be categorized as, outcome, individual level predictors(fixed effect) and group level predictors(random effect). The detailed explanation is listed below:
+
+* outcome: P(`y` = 1)
+
+* Fixed effect:
+  - `fico_10`,`inq_last_6mths`,`open_acc`,`dti_scale`,`installment_log`
+  - `int_rate`
+  
+* Random effect:
+  - Random intercept: `addr_state`, `sub_grade`, `term`, `purpose`, `emp_length`
+  - Random slope: `int_rate:sub_grade`
+
+The first model will use all the variable except `int_rate` to evaluate the risk, then `int_rate` will be added into the second model and then compare the model fit and it's coefficients.
+
+### 2.3 Experimental Design
+
+The whole dataset was divided into training set and validation set. The model was trained on training set data and it's performance was validated in the testing set to avoid over training. The acquisition of the training set and the validation set is done in the following manner:
+
+* The ratio of training vs testing was set to 7:3.
+* Separate the original dataset according to `y` into `y = 0` and `y = 1` 
+* Within the two table, randomly draw 30% of the rows and combine them as validation set.
+* Combine the remaining rows of the two tables as training set
+
+The resulting training dataset has 29,637 records and the validation set has 12,717 records
+
+### 2.4 Result Validation and Inference
+
+There are different ways to access a logistic regression model's fit. Since the purpose of this project is to study the probability of charge off conditioned on the borrower's credit history. It is un-necessary to make categorical predictions, meaning setting threshold to predict 0 response or 1 response. In fact during the model validation process, it is impossible to make such predictions because the overall probability estimated of charge off is quite low. \newline
+\newline
+Instead of categorical predictive power, the more adequate validation method is to use the model to simulate the original dataset, then examine the simulated distribution of charge off rate compared to the original data. \newline
+\newline
+When the model is deemed to be valid, statistical inference will be drawn from the coef estimates. especially, the two models mentioned above will be compared to explore the association of `int_rate` and the risks as well as it's potential impact.
+
+### 2.5 Model Estimation Package
+
+For this project, `glmer` function with `bimonial` family and `logit` link function in `lmer` package was used. Alternatively, `winBUGS` and `rstanarm` packages can also be used to evaluate the model coefficients.
+
+### 2.6 Limitations
+
+There are 3 major limitations associated with the project.
+
+1. One of the biggest assumptions associated with this project comes with the limitation of the dataset. In the real-world situation, one is able to apply for more than one loans. However, because the dataset masked all the member identification info, the assumption is that: when conditioned at all the credit information at the point of applying a loan, the risk is independent of the member id variable.
+
+2. The second biggest limitation of this model is predictive power into the future. because the estimation only took into account the fisical year, then it is in theory not adequate to access the change of risk due to time. In other words, the model assumes the risk is independent of time.
+
+3. Because of the nature of the `lmer` package, coefficients and standard errors estimated is not the most accurate. To achieve more accruate results, one can use `stan_glmer` from `rstanarm` instead of `glmer` and set the `intercept_prior = NULL`. Because of the computing cost of this approach, this project will not include this approach into the analysis.
+
+However, this does not affect our research goal if we are only examine the inference as a year average from 2012 to 2015. The deviation of this projects findings to the future true effects depends on the risk's rate of change with time which can be estimated in future works.
+
+## 3. EDA and Model Building
+
+### 3.1 Data Wrangling and EDA
+
+During the data wrangling and EDA process, all 150+ variables were examined and filtered based on the completeness, informativeness and relavence. Generally, variables contain over 70% `NA` values are dropped. It is not adviced to do so in a more serious settings, but for the scope of this project, unless the model fit is too poor, these variables will be ignored. Variables providing the same information in different coding or context will be discarded while keeping only one(for example, variables like `purpose` and `purpose_detail`, unless estimating the difference within each purpose is desired, the detailed info will be discarded unless doing so resulting a poor model fit).
+
+After selecting the relevant variables, EDA was performed to get a feel of the overall data. Mosaic plot and histogram was used to exaimine the distribution of each variable by its own or conditioned by the outcome.
+
+The source code can be found in the following files:
+
+* Data wrangling: `./Data_Wrangling_&_EDA/Lendingclubreaddata.R`
+* EDA: `./Data_Wrangling_&_EDA/EDA.R`
+
+### 3.2 Model Building
+
+After EDA, 18 predictors was selected and cleaned(includes scaling, taking log, etc.). the full list of variables is shown below:
+
+```{r predictors,tidy=TRUE}
+colname_19 <- colnames(lendingclub%>%dplyr::select(-y,-id))
+kable(colname_19,col.names = "variables")
+```
+
+Using the above variables, 2 models were constructed.\newline
+\newline
+The 1st model building is constructed of the following steps:
+
+1. Further drop un-informative variables using no-pooling logistic regression's AIC.
+2. Use the model selected by AIC and turn it into a multi-level model as described in previous sections.
+3. Examine the model fit via binned residual plot and the conditional distribution of the simulated "fake original dataset"
+
+The 2nd model building is constructed of the following steps:
+
+1. Use the formula of model 1, add `int_rate` as fixed effect and it's interaction with `sub_grade` as random effect.
+2. Access model fit using the same method and model 1.
+
+After model validation, two models were compared and it's inference were drawn. Then, the effect of `int_rate` was also examined.
+
+## 4. Results
+
+### 4.1 Model 1
+
+#### 4.1.1 Model Description and Validation
+
+Following the described steps the first model was built. The results are shown below:
+
+```{r model call,tidy=TRUE}
+display(ml_fit_aic)
+```
+
+The binned residual plot is shown below
+```{r model 1 binned residual,fig.align='left',,tidy=TRUE}
+binnedplot(x = fitted(ml_fit_aic),y = resid(ml_fit_aic,type="response"))
+```
+
+Under current model, we have the following performance:
+
+```{r val set 1}
+cat(sprintf("expected occurence of charged of under model 1 is %d",sum(y_pred_sim) ))
+```
+```{r val set 2}
+cat("true observed occurence of charged off in validation set is", sum(lendingclub_model_val$y))
+```
+The predicted occurence is really close to the original dataset. After examine the distribution using mosaic plot, the model is able to capture the overall trend of the data. One example is shown below:
+
+```{r model 1 mosaic}
+p1 <- ggplot(lendingclub_model_val)+geom_mosaic(aes(x = product(factor(y),addr_state),fill = factor(y)))+theme(axis.text.x = element_text(angle = 45),axis.title.x = element_blank(),legend.title = element_blank())+ylab("Observation")+ theme(legend.position="none")+ggtitle("mosaic plot of charged off rate conditioned on State")
+p2 <- ggplot(lendingclub_model_val)+geom_mosaic(aes(x = product(factor(sim),addr_state),fill = factor(sim)),show.legend = FALSE)+theme(axis.text.x = element_text(angle = 45),axis.title.x = element_blank())+ylab("Simulation")
+
+gridExtra::grid.arrange(p1,p2,nrow = 2)
+```
+
+
+#### 4.1.2 Inference
+```{r}
+coef_md_1 <- fixef(ml_fit_aic)
+names_md_1 <- names(coef_md_1)
+
+se_md_1 <- se.coef(ml_fit_aic)$fixef
+
+tab_1 <- data.frame(round(cbind(coef_md_1,se_md_1),3))
+kable(tab_1,col.names = c("Coef","SE"),caption = "Fixed Effect of Model 1")
+
+
+```
+
+For model 1, the fixed effect can be interpret as:
+
+* `Intercept`: The intercept is hard to interpret, it associated with the probability of charged off for a person with median fico score, 0 inquiry in last 6 months,0 open account,0 delinquency in 2 years, mean dti and mean installment. But without any random effect information.
+
+* `fico_10` is -0.068 means that on average, with each 10 points higher in fico score were 1.7% less likely to have a charged off when controlling for other fixed effect
+
+* `inq_last_6_mths` is 0.132 means that on average, 1 more inquiry in the last 6 months is associated with 3.3% increase in probability of charged off when controlling for other fixed effect
+
+* The relative large standard error estimated for `intallment_log` and `delinq_2yrs` indicates that the data does not have enough sample to have a good estimation of the coefficient.
+
+* the other fixed effect coefficients and be interpret in very similar manner.
+
+The result of the random effect is not discussed because it is not relavent to what is interested in this project.
+
+
+### 4.2 Model 2
+
+#### 4.2.1 Model Description and Validation
+
+The second model is evaluated as:
+```{r}
+display(ml_fit_aic_int)
+```
+
+the binned residual plot is:
+```{r}
+binnedplot(x = fitted(ml_fit_aic_int),y = resid(ml_fit_aic_int,type="response"))
+```
+under this model the fake data generating result is:
+```{r val set 3}
+cat(sprintf("expected occurence of charged of under model 1 is %d",sum(y_pred_int_sim) ))
+```
+```{r val set 4}
+cat("true observed occurence of charged off in validation set is", sum(lendingclub_model_val$y))
+```
+The overall distribution of predicted charged off conditioning on the variables are also very similar to the original data
+#### 4.2.2 Inference
+```{r}
+coef_md_2 <- fixef(ml_fit_aic_int)
+
+
+se_md_2 <- se.coef(ml_fit_aic_int)$fixef
+
+tab_2 <- data.frame(round(cbind(coef_md_2,se_md_2),3))
+kable(tab_2,col.names = c("Coef","SE"),caption = "Fixed Effect of Model 2")
+
+
+```
+The same as the 1st model, the intercept value is still very difficult to interpret. It is related to the probability at merely the same condition but with interest rate at the lowest.
+
+One interesting finding is that, by adding interest rate, the coefficient of fico score, installment changed dramatically. This is a sign indicating that this three variables are confounding covariates. The coefficient of interest rate indicates that each 1% increase of the issuing interest rate is associated with 2% increase of charged off risk when controlling for other fixed effect.
+
+```{r}
+corr_tab <- data.frame(cbind(lendingclub$int_rate_scale,lendingclub$fico_10,lendingclub$installment_log))
+colnames(corr_tab) <- c("interest rate","fico score","installment")
+cor(corr_tab)
+```
+
+
+
+## 5. Conclusions
+
+### 5.1 Risk Estimation
+
+The overall risk evaluation of both models gives a really close estimation on the validation set. 1893/1921 for the 1st model and 1889/1921. But this results is get only with one simulation. If we repeat the simulation for 1000 times.
+
+```{r simulation of expected charged off count}
+data_summary <- function(x) {
+   m <- mean(x)
+   ymin <- m-2*sd(x)
+   ymax <- m+2*sd(x)
+   return(c(y=m,ymin=ymin,ymax=ymax))
+}
+set.seed(2019)
+n_sims <- 1000
+md_1_sim <- rep(0,n_sims)
+md_2_sim <- md_1_sim
+n_obs <- length(y_pred_ml_aic)
+obs_val <- sum(lendingclub_model_val$y)/length(lendingclub_model_val$y)
+for(i in 1:n_sims) md_1_sim[i] <- sum(rbinom(n=n_obs,size = 1,prob = y_pred_ml_aic))/n_obs
+for(i in 1:n_sims) md_2_sim[i] <- sum(rbinom(n=n_obs,size = 1,prob = y_pred_ml_aic_int))/n_obs
+
+ggplot()+geom_violin(aes(x = rep(1,1000),y = md_1_sim,fill = "no interest rate"),alpha = .4)+stat_summary(aes(x = rep(2,1000),y = md_2_sim),fun.data=data_summary)+geom_violin(aes(x = rep(2,1000),y = md_2_sim,fill = "has interest rate"),alpha = .4)+stat_summary(aes(x = rep(1,1000),y = md_1_sim), fun.data=data_summary)+geom_hline(yintercept = obs_val,color = "grey",show.legend = TRUE)+labs(fill = "model difference",title = "simulation of overall charged off rate")
+```
+The grey horizontal line i
+### 5.2 `int_rate` Association Estimation
+
+### 5.3 Future Directions
+
+## Reference
